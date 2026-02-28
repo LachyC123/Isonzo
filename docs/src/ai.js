@@ -11,6 +11,7 @@ const BUSY_STATES = new Set([
     CharState.RINGOUT, CharState.DODGE, CharState.GRAB,
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
+    CharState.BLOCK,
 ]);
 
 export class BotAI {
@@ -24,6 +25,9 @@ export class BotAI {
         this.comboCount = 0;
         this.doingHeavy = false;
         this.heavyTimer = 0;
+        this.blocking = false;
+        this.blockTimer = 0;
+        this.stateThreshold = 0.5;
     }
 
     update(dt, char, allChars) {
@@ -49,6 +53,14 @@ export class BotAI {
                     intent.heavyCharge = true;
                 }
             }
+            if (this.blocking && char.state === CharState.BLOCK) {
+                this.blockTimer -= dt;
+                if (this.blockTimer <= 0) {
+                    this.blocking = false;
+                } else {
+                    intent.block = true;
+                }
+            }
             return;
         }
 
@@ -69,10 +81,9 @@ export class BotAI {
 
         char.facing = angle;
 
-        if (this._shouldDodge(char, allChars)) {
+        if (this._shouldDodge(char, allChars, dt)) {
             intent.dodge = true;
-            this.state = 'circle';
-            this.stateTimer = 0;
+            this._setState('circle');
             return;
         }
 
@@ -98,28 +109,33 @@ export class BotAI {
         });
     }
 
-    _shouldDodge(char, allChars) {
+    _shouldDodge(char, allChars, dt) {
         if (char.stamina < 20) return false;
         for (const other of allChars) {
             if (other === char || !other.alive) continue;
             if (!ATTACKING_STATES.has(other.state)) continue;
             const dist = distance2D(char.position.x, char.position.z, other.position.x, other.position.z);
             if (dist > 3.5) continue;
-            if (Math.random() < this.difficulty * 0.4 * (1 / 60)) return true;
+            if (Math.random() < this.difficulty * 0.4 * dt) return true;
         }
         return false;
     }
 
+    _setState(state) {
+        this.state = state;
+        this.stateTimer = 0;
+        this.stateThreshold = 0.3 + Math.random() * 0.6;
+    }
+
     _idle(char, dist, dt) {
-        if (this.stateTimer > 0.2 + Math.random() * 0.4) {
+        if (this.stateTimer > this.stateThreshold) {
             if (char.stamina < 30) {
-                this.state = 'retreat';
+                this._setState('retreat');
             } else if (dist > 5) {
-                this.state = 'approach';
+                this._setState('approach');
             } else {
-                this.state = 'circle';
+                this._setState('circle');
             }
-            this.stateTimer = 0;
         }
     }
 
@@ -130,13 +146,11 @@ export class BotAI {
         intent.sprint = dist > 8;
 
         if (dist < 3.2) {
-            this.state = Math.random() < 0.6 ? 'attack' : 'circle';
-            this.stateTimer = 0;
+            this._setState(Math.random() < 0.6 ? 'attack' : 'circle');
             this.comboCount = 0;
         }
         if (this.stateTimer > 3.5) {
-            this.state = 'circle';
-            this.stateTimer = 0;
+            this._setState('circle');
         }
     }
 
@@ -148,22 +162,22 @@ export class BotAI {
         intent.moveX = Math.sin(strafeAngle) * 0.65 + Math.sin(angle) * approachF;
         intent.moveZ = Math.cos(strafeAngle) * 0.65 + Math.cos(angle) * approachF;
 
-        if (this.stateTimer > 0.8 + Math.random() * 1.8) {
+        if (this.stateTimer > this.stateThreshold + 0.6) {
             const roll = Math.random();
             if (roll < 0.35 && dist < 3) {
-                this.state = 'attack';
+                this._setState('attack');
                 this.comboCount = 0;
             } else if (roll < 0.50 && dist < 2.2) {
                 intent.grab = true;
-                this.state = 'idle';
+                this._setState('idle');
             } else if (roll < 0.6) {
                 this.circleDir *= -1;
+                this._setState('circle');
             } else if (char.stamina < 35) {
-                this.state = 'retreat';
+                this._setState('retreat');
             } else {
-                this.state = 'approach';
+                this._setState('approach');
             }
-            this.stateTimer = 0;
         }
     }
 
@@ -181,21 +195,18 @@ export class BotAI {
                     this.doingHeavy = true;
                     this.heavyTimer = 0.3 + Math.random() * 0.8;
                     intent.heavyCharge = true;
-                    this.state = 'idle';
-                    this.stateTimer = 0;
+                    this._setState('idle');
                 } else {
                     intent.lightAttack = true;
                     this.comboCount++;
                 }
             } else {
-                this.state = 'circle';
-                this.stateTimer = 0;
+                this._setState('circle');
             }
         }
 
         if (this.stateTimer > 2.5) {
-            this.state = 'circle';
-            this.stateTimer = 0;
+            this._setState('circle');
         }
     }
 
@@ -204,13 +215,14 @@ export class BotAI {
         intent.moveX = -Math.sin(angle);
         intent.moveZ = -Math.cos(angle);
 
-        if (dist < 2.5 && Math.random() < 0.3 * dt) {
+        if (dist < 2.5 && Math.random() < 0.5 * dt && !this.blocking) {
+            this.blocking = true;
+            this.blockTimer = 0.4 + Math.random() * 0.8;
             intent.block = true;
         }
 
         if (char.stamina > 60 || this.stateTimer > 2.5) {
-            this.state = 'approach';
-            this.stateTimer = 0;
+            this._setState('approach');
         }
     }
 
@@ -227,10 +239,13 @@ export class BotAI {
     reset() {
         this.state = 'idle';
         this.stateTimer = 0;
+        this.stateThreshold = 0.5;
         this.decisionTimer = 0;
         this.target = null;
         this.comboCount = 0;
         this.doingHeavy = false;
         this.heavyTimer = 0;
+        this.blocking = false;
+        this.blockTimer = 0;
     }
 }

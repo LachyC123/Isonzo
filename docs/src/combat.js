@@ -45,7 +45,12 @@ function exitAction(char) {
 }
 
 export function processCharacterState(char, dt) {
-    if (!char.alive) return;
+    if (!char.alive) {
+        if (char.state === CharState.KO || char.state === CharState.RINGOUT) {
+            char.stateTimer += dt;
+        }
+        return;
+    }
     if (char.hitstopTimer > 0) return;
 
     char.stateTimer += dt;
@@ -87,7 +92,7 @@ function handleFreeState(char, dt) {
     if (intent.lightAttack) {
         enterState(char, CharState.LIGHT1);
         char.combo = 1;
-        char.comboTimer = 0.45;
+        char.comboTimer = 0;
         return;
     }
     if (intent.heavyCharge) {
@@ -109,7 +114,7 @@ function handleFreeState(char, dt) {
         return;
     }
     if (intent.block) {
-        char.state = CharState.BLOCK;
+        enterState(char, CharState.BLOCK);
         char.velocity.x = 0;
         char.velocity.z = 0;
         return;

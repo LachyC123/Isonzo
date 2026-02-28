@@ -17,6 +17,7 @@ export class InputManager {
 
         this.touchHeld = {};
         this._touchPressTime = {};
+        this._mobileAttackTap = false;
     }
 
     init() {
@@ -102,7 +103,21 @@ export class InputManager {
             el.addEventListener('touchcancel', () => { this.touchHeld[name] = false; });
         };
 
-        bind('btn-atk', 'attack');
+        const atkEl = document.getElementById('btn-atk');
+        if (atkEl) {
+            atkEl.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.touchHeld.attack = true;
+                this._touchPressTime.attack = performance.now();
+            }, { passive: false });
+            atkEl.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                const held = performance.now() - (this._touchPressTime.attack || 0);
+                if (held < 300) this._mobileAttackTap = true;
+                this.touchHeld.attack = false;
+            }, { passive: false });
+            atkEl.addEventListener('touchcancel', () => { this.touchHeld.attack = false; });
+        }
         bind('btn-jmp', 'jump');
         bind('btn-dge', 'dodge');
         bind('btn-grb', 'grab');
@@ -132,13 +147,16 @@ export class InputManager {
     }
 
     get wantLightAttack() {
-        return this.justClicked(0) || this.justPressed('KeyJ') || this.justTouched('attack');
+        if (this.isMobile) {
+            return this._mobileAttackTap;
+        }
+        return this.justClicked(0) || this.justPressed('KeyJ');
     }
 
     get wantHeavyHold() {
         if (this.isMobile) {
             return this.touchHeld.attack &&
-                (performance.now() - (this._touchPressTime.attack || 0) > 350);
+                (performance.now() - (this._touchPressTime.attack || 0) > 300);
         }
         return this.mouseButtons[2] || this.keys['KeyK'];
     }
@@ -167,5 +185,6 @@ export class InputManager {
         this._justPressedKeys.clear();
         this._justPressedMouse.clear();
         this._justTouched.clear();
+        this._mobileAttackTap = false;
     }
 }

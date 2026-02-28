@@ -308,6 +308,7 @@ export function updateCharacterAnimation(char, dt) {
             return;
         }
         case CharState.RINGOUT: {
+            char.position.y -= 18 * dt;
             char.mesh.position.copy(char.position);
             char.mesh.rotation.x += dt * 5;
             char.mesh.rotation.z += dt * 3;
