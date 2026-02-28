@@ -203,14 +203,19 @@ export class Game {
 
         const hits = checkCombatHits(this.characters, this.ui, this.scene.camera, this.scene);
         for (const hit of hits) {
-            if (hit.attacker === this.player || hit.attacker.isPlayer) {
+            if (hit.attacker === this.player) {
                 this.comboCount++;
                 this.comboTimer = 2;
                 this.ui.updateCombo(this.comboCount);
             }
-            if (hit.attacker === this.player || hit.target === this.player) {
+
+            const severity = hit.isKO ? 'ko' : (hit.isHeavy || hit.damage >= 20 ? 'heavy' : 'light');
+            this.ui.spawnHitBurst(hit.impactPosition, this.scene.camera, { severity, blocked: hit.blocked });
+
+            if (hit.target === this.player) {
                 this.ui.triggerHitFlash(hit.isHeavy || hit.damage >= 20 || hit.isKO);
             }
+
             if (hit.isKO) this._handleKO(hit.target, hit.attacker);
         }
 

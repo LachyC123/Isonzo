@@ -27,6 +27,7 @@ html, body {
     width: 100%;
     height: 100%;
     display: block;
+    transition: filter 0.12s ease-out;
 }
 
 /* ── UI Overlay ── */
@@ -344,6 +345,78 @@ html, body {
     overflow: hidden;
 }
 
+
+
+#hit-bursts {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.hit-burst {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 210, 120, 0.88);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 16px rgba(255, 170, 60, 0.55);
+    animation: hit-burst-pop 0.42s cubic-bezier(0.2, 0.7, 0.15, 1) forwards;
+}
+
+.hit-burst.light {
+    border-color: rgba(255, 215, 130, 0.88);
+}
+
+.hit-burst.heavy,
+.hit-burst.ko {
+    width: 20px;
+    height: 20px;
+    border-width: 3px;
+    box-shadow: 0 0 22px rgba(255, 150, 60, 0.78);
+}
+
+.hit-burst.ko {
+    border-color: rgba(255, 110, 90, 0.92);
+    box-shadow: 0 0 34px rgba(255, 95, 70, 0.88);
+}
+
+.hit-burst.blocked {
+    border-color: rgba(160, 205, 255, 0.85);
+    box-shadow: 0 0 18px rgba(100, 170, 255, 0.65);
+}
+
+.hit-burst .spark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 3px;
+    height: 16px;
+    background: linear-gradient(to top, rgba(255, 235, 210, 0), rgba(255, 210, 120, 0.95));
+    transform-origin: 50% 0%;
+    transform: translate(-50%, -10%) rotate(var(--a));
+    animation: hit-spark 0.36s ease-out forwards;
+}
+
+.hit-burst.blocked .spark {
+    background: linear-gradient(to top, rgba(220, 235, 255, 0), rgba(165, 210, 255, 0.95));
+}
+
+@keyframes hit-burst-pop {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.25); }
+    60% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2.7); }
+}
+
+@keyframes hit-spark {
+    0% { opacity: 1; transform: translate(-50%, -10%) rotate(var(--a)) scaleY(1); }
+    100% { opacity: 0; transform: translate(-50%, -90%) rotate(var(--a)) scaleY(0.15); }
+}
+
+body.impact-pulse #game-canvas {
+    filter: brightness(1.06) saturate(1.15);
+}
 #hit-flash {
     position: absolute;
     inset: 0;

@@ -316,7 +316,10 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             attacker.hitstopTimer = hitstopTime;
             target.hitstopTimer = hitstopTime;
 
-            if (isHeavy && sceneManager) sceneManager.shake(0.4);
+            if (sceneManager) {
+                const severityShake = isHeavy ? 0.42 : blocked ? 0.08 : 0.16;
+                sceneManager.shake(target.health <= 0 ? 0.55 : severityShake);
+            }
 
             if (uiManager && camera) {
                 uiManager.spawnDamageNumber(
@@ -325,7 +328,16 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 );
             }
 
-            results.push({ attacker, target, damage, isHeavy, blocked, isKO: target.health <= 0 });
+            const isKO = target.health <= 0;
+            results.push({
+                attacker,
+                target,
+                damage,
+                isHeavy,
+                blocked,
+                isKO,
+                impactPosition: { x: target.position.x, y: target.position.y, z: target.position.z },
+            });
             break;
         }
     }
