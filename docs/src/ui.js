@@ -1,0 +1,158 @@
+import * as THREE from 'three';
+
+export class UIManager {
+    constructor() {
+        this.announcer = document.getElementById('announcer');
+        this.comboMeter = document.getElementById('combo-meter');
+        this.comboCount = document.getElementById('combo-count');
+        this.damageContainer = document.getElementById('damage-numbers');
+        this.aliveCount = document.getElementById('alive-count');
+        this.roundText = document.getElementById('round-text');
+        this.playerHealthBar = document.getElementById('player-health');
+        this.playerHealthText = document.getElementById('player-health-text');
+        this.playerStaminaBar = document.getElementById('player-stamina');
+        this.enemyContainer = document.getElementById('enemy-stats-container');
+        this.mobileControls = document.getElementById('mobile-controls');
+        this.lockOnEl = document.getElementById('lock-on-marker');
+
+        this._comboTimer = 0;
+        this._announcerTimeout = null;
+    }
+
+    showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+    }
+
+    showMobileControls(show) {
+        if (this.mobileControls) {
+            this.mobileControls.classList.toggle('active', show);
+        }
+    }
+
+    setupEnemyBars(characters) {
+        this.enemyContainer.innerHTML = '';
+        for (const char of characters) {
+            if (char.isPlayer) continue;
+            const div = document.createElement('div');
+            div.className = 'enemy-stat';
+            div.id = `enemy-${char.name}`;
+            const hexColor = '#' + new THREE.Color(char.colorSet.body).getHexString();
+            div.innerHTML = `
+                <div class="player-name" style="color:${hexColor}">${char.name}</div>
+                <div class="bar-container health-bar">
+                    <div class="bar-fill" id="enemy-health-${char.name}"></div>
+                </div>
+            `;
+            this.enemyContainer.appendChild(div);
+        }
+    }
+
+    updateHUD(player, enemies, camera, dt) {
+        if (this.playerHealthBar) {
+            const hp = Math.max(0, player.health);
+            this.playerHealthBar.style.width = `${hp}%`;
+            this.playerHealthText.textContent = Math.ceil(hp);
+            this.playerHealthBar.style.background = hp < 30
+                ? 'linear-gradient(90deg, #ff1111, #ff3333)'
+                : 'linear-gradient(90deg, #ff3333, #ff6644)';
+        }
+
+        if (this.playerStaminaBar) {
+            const sp = Math.max(0, (player.stamina / player.maxStamina) * 100);
+            this.playerStaminaBar.style.width = `${sp}%`;
+        }
+
+        for (const e of enemies) {
+            const bar = document.getElementById(`enemy-health-${e.name}`);
+            if (bar) bar.style.width = `${Math.max(0, e.health)}%`;
+            const stat = document.getElementById(`enemy-${e.name}`);
+            if (stat) stat.style.opacity = e.alive ? '1' : '0.3';
+        }
+
+        const alive = [player, ...enemies].filter(c => c.alive).length;
+        if (this.aliveCount) this.aliveCount.textContent = alive;
+
+        if (this._comboTimer > 0) {
+            this._comboTimer -= dt;
+            this.comboMeter.classList.add('visible');
+        } else {
+            this.comboMeter.classList.remove('visible');
+        }
+    }
+
+    showAnnouncer(text, duration = 2) {
+        if (!this.announcer) return;
+        this.announcer.textContent = text;
+        this.announcer.classList.add('visible');
+        if (this._announcerTimeout) clearTimeout(this._announcerTimeout);
+        this._announcerTimeout = setTimeout(() => {
+            this.announcer.classList.remove('visible');
+        }, duration * 1000);
+    }
+
+    updateCombo(count) {
+        if (count > 1) {
+            this.comboCount.textContent = count;
+            this._comboTimer = 2;
+        }
+    }
+
+    spawnDamageNumber(worldPos, amount, isCrit, camera) {
+        const v = new THREE.Vector3(worldPos.x, worldPos.y + 1.8, worldPos.z);
+        v.project(camera);
+        if (v.z > 1 || v.z < 0) return;
+
+        const sx = (v.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+
+        const el = document.createElement('div');
+        el.className = 'damage-number' + (isCrit ? ' crit' : '');
+        el.textContent = Math.round(amount);
+        el.style.left = `${sx}px`;
+        el.style.top = `${sy}px`;
+        this.damageContainer.appendChild(el);
+
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 900);
+    }
+
+    updateRound(round, playerWins) {
+        if (this.roundText) this.roundText.textContent = `ROUND ${round}`;
+        document.querySelectorAll('.pip').forEach((pip, i) => {
+            pip.className = 'pip' + (i < playerWins ? ' won' : '');
+        });
+    }
+
+    updateLockOn(target, camera) {
+        if (!this.lockOnEl) return;
+        if (!target || !target.alive) {
+            this.lockOnEl.style.display = 'none';
+            return;
+        }
+        const v = new THREE.Vector3(target.position.x, target.position.y + 2, target.position.z);
+        v.project(camera);
+        if (v.z > 1 || v.z < 0) {
+            this.lockOnEl.style.display = 'none';
+            return;
+        }
+        const sx = (v.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+        this.lockOnEl.style.display = 'block';
+        this.lockOnEl.style.left = `${sx - 20}px`;
+        this.lockOnEl.style.top = `${sy - 20}px`;
+    }
+
+    showResults(isVictory, stats) {
+        this.showScreen('results-screen');
+        const title = document.getElementById('result-title');
+        title.textContent = isVictory ? 'VICTORY!' : 'DEFEATED';
+        title.className = isVictory ? 'victory' : 'defeat';
+        const statsEl = document.getElementById('result-stats');
+        statsEl.innerHTML = `
+            <p>Rounds Won: ${stats.roundWins}</p>
+            <p>Damage Dealt: ${Math.round(stats.damageDealt)}</p>
+            <p>KOs: ${stats.kills}</p>
+        `;
+    }
+}

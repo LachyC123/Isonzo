@@ -1,0 +1,82 @@
+const GRAVITY = -32;
+const ARENA_RADIUS = 26;
+const RINGOUT_RADIUS = 30;
+const RINGOUT_Y = -12;
+const GROUND_Y = 0;
+const FRICTION = 0.88;
+
+export { ARENA_RADIUS, RINGOUT_RADIUS };
+
+export function updatePhysics(char, dt) {
+    if (!char.alive) return;
+    if (char.hitstopTimer > 0) {
+        char.hitstopTimer -= dt;
+        return;
+    }
+
+    if (!char.grounded) {
+        char.velocity.y += GRAVITY * dt;
+        if (char.velocity.y < -25) char.velocity.y = -25;
+    }
+
+    char.knockbackVel.x *= Math.max(0, 1 - 4 * dt);
+    char.knockbackVel.y *= Math.max(0, 1 - 2 * dt);
+    char.knockbackVel.z *= Math.max(0, 1 - 4 * dt);
+
+    char.position.x += (char.velocity.x + char.knockbackVel.x) * dt;
+    char.position.y += (char.velocity.y + char.knockbackVel.y) * dt;
+    char.position.z += (char.velocity.z + char.knockbackVel.z) * dt;
+
+    if (char.position.y <= GROUND_Y) {
+        const distXZ = Math.sqrt(char.position.x * char.position.x + char.position.z * char.position.z);
+        if (distXZ <= ARENA_RADIUS) {
+            char.position.y = GROUND_Y;
+            char.velocity.y = 0;
+            char.knockbackVel.y = 0;
+            char.grounded = true;
+        } else {
+            char.grounded = false;
+        }
+    } else {
+        char.grounded = false;
+    }
+
+    if (char.staminaRegenDelay > 0) {
+        char.staminaRegenDelay -= dt;
+    } else {
+        char.stamina = Math.min(char.maxStamina, char.stamina + 22 * dt);
+    }
+
+    if (char.buffs.regenUp) {
+        char.health = Math.min(char.maxHealth, char.health + 3 * dt);
+    }
+}
+
+export function checkRingOut(char) {
+    if (!char.alive) return false;
+    const distXZ = Math.sqrt(char.position.x * char.position.x + char.position.z * char.position.z);
+    return char.position.y < RINGOUT_Y || distXZ > RINGOUT_RADIUS;
+}
+
+export function checkCharacterCollisions(characters) {
+    const minDist = 0.8;
+    for (let i = 0; i < characters.length; i++) {
+        for (let j = i + 1; j < characters.length; j++) {
+            const a = characters[i];
+            const b = characters[j];
+            if (!a.alive || !b.alive) continue;
+            const dx = b.position.x - a.position.x;
+            const dz = b.position.z - a.position.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < minDist && dist > 0.01) {
+                const push = (minDist - dist) * 0.5;
+                const nx = dx / dist;
+                const nz = dz / dist;
+                a.position.x -= nx * push;
+                a.position.z -= nz * push;
+                b.position.x += nx * push;
+                b.position.z += nz * push;
+            }
+        }
+    }
+}
