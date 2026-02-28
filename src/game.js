@@ -154,6 +154,7 @@ export class Game {
             case GameState.RESULTS: break;
         }
 
+        this.scene.updateParticles(dt);
         this.scene.render();
         this.input.endFrame();
     }
@@ -205,6 +206,18 @@ export class Game {
                 this.comboTimer = 2;
                 this.ui.updateCombo(this.comboCount);
             }
+
+            if (hit.damage > 0) {
+                const color = hit.damage >= 18 ? 0xffaa22 : 0xffffff;
+                this.scene.spawnHitParticles(hit.target.position, color, hit.damage >= 18 ? 14 : 6);
+                if (hit.damage >= 15) {
+                    this.scene.spawnImpactRing(hit.target.position);
+                }
+            }
+            if (hit.isGrab) {
+                this.scene.spawnHitParticles(hit.target.position, 0xffdd44, 5);
+            }
+
             if (hit.isKO) this._handleKO(hit.target, hit.attacker);
         }
 
@@ -215,10 +228,18 @@ export class Game {
             if (c.alive && checkRingOut(c)) this._handleRingOut(c);
         }
 
+        for (const c of this.characters) {
+            if (c.state === CharState.GROUND_BOUNCE && c.stateTimer < 0.05) {
+                this.scene.spawnHitParticles(c.position, 0xcccccc, 4);
+                this.scene.shake(0.15);
+            }
+        }
+
         const pickup = this.items.update(dt, this.characters);
         if (pickup && pickup.picked) {
             Audio.playPickup();
             this.ui.showAnnouncer(`${pickup.character.name}: ${pickup.type.name}`, 1);
+            this.scene.spawnHitParticles(pickup.character.position, 0x44ff44, 8);
         }
 
         this._updateLockOn();
@@ -302,8 +323,15 @@ export class Game {
         victim.alive = false;
         victim.state = CharState.KO;
         victim.stateTimer = 0;
+        if (victim.grabbedBy) {
+            victim.grabbedBy.grabTarget = null;
+            victim.grabbedBy = null;
+        }
         if (attacker) attacker.kills++;
         Audio.playKO();
+        this.scene.shake(0.6);
+        this.scene.spawnHitParticles(victim.position, 0xff4444, 20);
+        this.scene.spawnImpactRing(victim.position);
         this.ui.showAnnouncer(`${victim.name} KO!`, 1.5);
     }
 
@@ -312,6 +340,10 @@ export class Game {
         char.alive = false;
         char.state = CharState.RINGOUT;
         char.stateTimer = 0;
+        if (char.grabbedBy) {
+            char.grabbedBy.grabTarget = null;
+            char.grabbedBy = null;
+        }
         Audio.playRingOut();
         this.ui.showAnnouncer(`${char.name} RING OUT!`, 1.5);
     }

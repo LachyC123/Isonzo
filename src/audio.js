@@ -54,13 +54,33 @@ function playNoise(duration, volume = 0.15, delay = 0) {
 
 export function playHit() {
     playTone(200, 0.1, 'square', 0.2);
+    playTone(150, 0.06, 'sawtooth', 0.1);
     playNoise(0.08, 0.12);
 }
 
 export function playHeavyHit() {
-    playTone(120, 0.2, 'square', 0.3);
-    playTone(80, 0.3, 'sine', 0.2);
-    playNoise(0.15, 0.2);
+    playTone(100, 0.25, 'square', 0.3);
+    playTone(60, 0.35, 'sine', 0.25);
+    playNoise(0.18, 0.25);
+    playTone(200, 0.08, 'sawtooth', 0.15);
+}
+
+export function playSlam() {
+    playTone(50, 0.4, 'sine', 0.35);
+    playTone(80, 0.3, 'square', 0.2);
+    playNoise(0.25, 0.3);
+    playTone(30, 0.5, 'sine', 0.2, 0.1);
+}
+
+export function playLaunch() {
+    playTone(300, 0.15, 'sine', 0.15);
+    playTone(500, 0.1, 'sine', 0.12, 0.05);
+    playNoise(0.1, 0.1);
+}
+
+export function playBounce() {
+    playTone(150, 0.08, 'sine', 0.12);
+    playNoise(0.06, 0.08);
 }
 
 export function playDodge() {

@@ -3,12 +3,14 @@ import { distance2D, angleBetween } from './utils.js';
 
 const ATTACKING_STATES = new Set([
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
-    CharState.HEAVY_RELEASE, CharState.GRAB,
+    CharState.HEAVY_RELEASE, CharState.GRAB, CharState.GRAB_SLAM,
 ]);
 
 const BUSY_STATES = new Set([
-    CharState.HITSTUN, CharState.KNOCKBACK, CharState.KO,
+    CharState.HITSTUN, CharState.KNOCKBACK, CharState.LAUNCHED,
+    CharState.GROUND_BOUNCE, CharState.KO,
     CharState.RINGOUT, CharState.DODGE, CharState.GRAB,
+    CharState.GRAB_HOLD, CharState.GRAB_SLAM, CharState.GRABBED,
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
     CharState.BLOCK,

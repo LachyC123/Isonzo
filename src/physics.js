@@ -1,14 +1,16 @@
-const GRAVITY = -32;
+import { CharState } from './character.js';
+
+const GRAVITY = -35;
 const ARENA_RADIUS = 26;
 const RINGOUT_RADIUS = 30;
 const RINGOUT_Y = -12;
 const GROUND_Y = 0;
-const FRICTION = 0.88;
 
 export { ARENA_RADIUS, RINGOUT_RADIUS };
 
 export function updatePhysics(char, dt) {
     if (!char.alive) return;
+    if (char.state === CharState.GRABBED) return;
     if (char.hitstopTimer > 0) {
         char.hitstopTimer -= dt;
         return;
@@ -16,12 +18,12 @@ export function updatePhysics(char, dt) {
 
     if (!char.grounded) {
         char.velocity.y += GRAVITY * dt;
-        if (char.velocity.y < -25) char.velocity.y = -25;
+        if (char.velocity.y < -30) char.velocity.y = -30;
     }
 
-    char.knockbackVel.x *= Math.max(0, 1 - 4 * dt);
-    char.knockbackVel.y *= Math.max(0, 1 - 2 * dt);
-    char.knockbackVel.z *= Math.max(0, 1 - 4 * dt);
+    char.knockbackVel.x *= Math.max(0, 1 - 3.5 * dt);
+    char.knockbackVel.y *= Math.max(0, 1 - 1.5 * dt);
+    char.knockbackVel.z *= Math.max(0, 1 - 3.5 * dt);
 
     char.position.x += (char.velocity.x + char.knockbackVel.x) * dt;
     char.position.y += (char.velocity.y + char.knockbackVel.y) * dt;
@@ -30,10 +32,25 @@ export function updatePhysics(char, dt) {
     if (char.position.y <= GROUND_Y) {
         const distXZ = Math.sqrt(char.position.x * char.position.x + char.position.z * char.position.z);
         if (distXZ <= ARENA_RADIUS) {
-            char.position.y = GROUND_Y;
-            char.velocity.y = 0;
-            char.knockbackVel.y = 0;
-            char.grounded = true;
+            const impactSpeed = -(char.velocity.y + char.knockbackVel.y);
+
+            if ((char.state === CharState.LAUNCHED || char.state === CharState.GROUND_BOUNCE)
+                && impactSpeed > 5 && char.bounceCount < 3) {
+                char.position.y = GROUND_Y;
+                char.velocity.y = impactSpeed * 0.35;
+                char.knockbackVel.y = 0;
+                char.knockbackVel.x *= 0.5;
+                char.knockbackVel.z *= 0.5;
+                char.grounded = false;
+                char.bounceCount++;
+                char.state = CharState.GROUND_BOUNCE;
+                char.stateTimer = 0;
+            } else {
+                char.position.y = GROUND_Y;
+                char.velocity.y = 0;
+                char.knockbackVel.y = 0;
+                char.grounded = true;
+            }
         } else {
             char.grounded = false;
         }
@@ -59,12 +76,13 @@ export function checkRingOut(char) {
 }
 
 export function checkCharacterCollisions(characters) {
-    const minDist = 0.8;
+    const minDist = 0.9;
     for (let i = 0; i < characters.length; i++) {
         for (let j = i + 1; j < characters.length; j++) {
             const a = characters[i];
             const b = characters[j];
             if (!a.alive || !b.alive) continue;
+            if (a.state === CharState.GRABBED || b.state === CharState.GRABBED) continue;
             const dx = b.position.x - a.position.x;
             const dz = b.position.z - a.position.z;
             const dist = Math.sqrt(dx * dx + dz * dz);
