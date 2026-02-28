@@ -282,6 +282,50 @@ export class SceneManager {
         }
     }
 
+    spawnDustCloud(pos) {
+        for (let i = 0; i < 6; i++) {
+            let p;
+            if (this.particlePool.length > 0) {
+                p = this.particlePool.pop();
+            } else {
+                const geo = new THREE.SphereGeometry(0.08, 4, 3);
+                const mat = new THREE.MeshBasicMaterial({ transparent: true });
+                p = { mesh: new THREE.Mesh(geo, mat), vel: new THREE.Vector3(), life: 0, maxLife: 0 };
+                this.scene.add(p.mesh);
+            }
+            p.mesh.visible = true;
+            p.mesh.material.color.setHex(0x887766);
+            p.mesh.material.opacity = 0.6;
+            p.mesh.position.set(pos.x, 0.1, pos.z);
+            const angle = Math.random() * Math.PI * 2;
+            const spd = 2 + Math.random() * 3;
+            p.vel.set(Math.cos(angle) * spd, 0.5 + Math.random() * 1.5, Math.sin(angle) * spd);
+            p.life = 0;
+            p.maxLife = 0.3 + Math.random() * 0.3;
+            const s = 1.5 + Math.random() * 2.5;
+            p.mesh.scale.set(s, s * 0.6, s);
+            this.particles.push(p);
+        }
+    }
+
+    spawnSpeedLines(pos, dir, color = 0xffffff) {
+        for (let i = 0; i < 3; i++) {
+            const geo = new THREE.PlaneGeometry(0.03, 0.4 + Math.random() * 0.3);
+            const mat = new THREE.MeshBasicMaterial({
+                color, transparent: true, opacity: 0.5, side: THREE.DoubleSide,
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(
+                pos.x + (Math.random() - 0.5) * 0.8,
+                pos.y + 0.5 + Math.random() * 1.2,
+                pos.z + (Math.random() - 0.5) * 0.8,
+            );
+            mesh.lookAt(this.camera.position);
+            this.scene.add(mesh);
+            this.trails.push({ mesh, life: 0, maxLife: 0.15, type: 'line' });
+        }
+    }
+
     spawnImpactRing(pos) {
         const geo = new THREE.RingGeometry(0.1, 0.3, 16);
         const mat = new THREE.MeshBasicMaterial({
@@ -324,9 +368,12 @@ export class SceneManager {
             }
             const t = tr.life / tr.maxLife;
             if (tr.type === 'ring') {
-                const scale = 1 + t * 4;
+                const scale = 1 + t * 5;
                 tr.mesh.scale.set(scale, scale, scale);
                 tr.mesh.material.opacity = 0.8 * (1 - t);
+            } else if (tr.type === 'line') {
+                tr.mesh.material.opacity = 0.5 * (1 - t);
+                tr.mesh.scale.y = 1 + t * 2;
             }
         }
     }

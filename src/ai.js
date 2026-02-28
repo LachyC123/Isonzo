@@ -4,16 +4,17 @@ import { distance2D, angleBetween } from './utils.js';
 const ATTACKING_STATES = new Set([
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_RELEASE, CharState.GRAB, CharState.GRAB_SLAM,
+    CharState.ELBOW_DROP,
 ]);
 
 const BUSY_STATES = new Set([
     CharState.HITSTUN, CharState.KNOCKBACK, CharState.LAUNCHED,
-    CharState.GROUND_BOUNCE, CharState.KO,
+    CharState.GROUND_BOUNCE, CharState.GETUP, CharState.KO,
     CharState.RINGOUT, CharState.DODGE, CharState.GRAB,
     CharState.GRAB_HOLD, CharState.GRAB_SLAM, CharState.GRABBED,
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
-    CharState.BLOCK,
+    CharState.ELBOW_DROP, CharState.BLOCK,
 ]);
 
 export class BotAI {
@@ -30,6 +31,9 @@ export class BotAI {
         this.blocking = false;
         this.blockTimer = 0;
         this.stateThreshold = 0.5;
+        this.aggression = 0.4 + Math.random() * 0.4;
+        this.preferGrab = Math.random() > 0.5;
+        this.patience = 0.5 + Math.random() * 1.0;
     }
 
     update(dt, char, allChars) {
@@ -63,6 +67,9 @@ export class BotAI {
                     intent.block = true;
                 }
             }
+            if (char.state === CharState.LIGHT1 || char.state === CharState.LIGHT2) {
+                intent.lightAttack = true;
+            }
             return;
         }
 
@@ -74,7 +81,7 @@ export class BotAI {
 
         if (!this.target || !this.target.alive || this.decisionTimer <= 0) {
             this.target = this._pickTarget(char, enemies);
-            this.decisionTimer = 0.3 + Math.random() * 0.4;
+            this.decisionTimer = 0.25 + Math.random() * 0.35;
         }
 
         const target = this.target;
@@ -83,43 +90,72 @@ export class BotAI {
 
         char.facing = angle;
 
-        if (this._shouldDodge(char, allChars, dt)) {
-            intent.dodge = true;
-            this._setState('circle');
-            return;
-        }
+        if (this._reactiveActions(char, allChars, target, dist, angle, dt)) return;
 
         switch (this.state) {
             case 'idle': this._idle(char, dist, dt); break;
-            case 'approach': this._approach(char, dist, angle, dt); break;
+            case 'approach': this._approach(char, target, dist, angle, dt); break;
             case 'circle': this._circle(char, target, dist, angle, dt); break;
             case 'attack': this._attack(char, target, dist, angle, dt); break;
-            case 'retreat': this._retreat(char, dist, angle, dt); break;
+            case 'retreat': this._retreat(char, target, dist, angle, dt); break;
+            case 'rushdown': this._rushdown(char, target, dist, angle, dt); break;
         }
 
         this._avoidEdge(char);
     }
 
     _pickTarget(char, enemies) {
-        if (Math.random() < 0.25) {
-            return enemies.reduce((a, b) => a.health < b.health ? a : b);
+        const hpWeight = 0.3;
+        const distWeight = 0.7;
+
+        let best = enemies[0];
+        let bestScore = Infinity;
+
+        for (const e of enemies) {
+            const d = distance2D(char.position.x, char.position.z, e.position.x, e.position.z);
+            const score = d * distWeight + (e.health / 100) * 20 * hpWeight;
+            if (score < bestScore) { bestScore = score; best = e; }
         }
-        return enemies.reduce((a, b) => {
-            const dA = distance2D(char.position.x, char.position.z, a.position.x, a.position.z);
-            const dB = distance2D(char.position.x, char.position.z, b.position.x, b.position.z);
-            return dA < dB ? a : b;
-        });
+        return best;
     }
 
-    _shouldDodge(char, allChars, dt) {
+    _reactiveActions(char, allChars, target, dist, angle, dt) {
         if (char.stamina < 20) return false;
+
         for (const other of allChars) {
             if (other === char || !other.alive) continue;
             if (!ATTACKING_STATES.has(other.state)) continue;
-            const dist = distance2D(char.position.x, char.position.z, other.position.x, other.position.z);
-            if (dist > 3.5) continue;
-            if (Math.random() < this.difficulty * 0.4 * dt) return true;
+            const d = distance2D(char.position.x, char.position.z, other.position.x, other.position.z);
+            if (d > 3.5) continue;
+
+            const reaction = this.difficulty * 0.5 * dt;
+
+            if (other.state === CharState.GRAB && Math.random() < reaction * 2) {
+                char.intent.lightAttack = true;
+                char.facing = angleBetween(char.position.x, char.position.z, other.position.x, other.position.z);
+                return true;
+            }
+
+            if (Math.random() < reaction) {
+                if (Math.random() < 0.7) {
+                    char.intent.dodge = true;
+                    const away = angleBetween(other.position.x, other.position.z, char.position.x, char.position.z);
+                    char.facing = away;
+                } else if (!this.blocking) {
+                    this.blocking = true;
+                    this.blockTimer = 0.3 + Math.random() * 0.5;
+                    char.intent.block = true;
+                }
+                this._setState('circle');
+                return true;
+            }
         }
+
+        if (target.state === CharState.BLOCK && dist < 2.5 && Math.random() < 0.6 * dt) {
+            char.intent.grab = true;
+            return true;
+        }
+
         return false;
     }
 
@@ -130,10 +166,14 @@ export class BotAI {
     }
 
     _idle(char, dist, dt) {
-        if (this.stateTimer > this.stateThreshold) {
+        if (this.stateTimer > this.stateThreshold * 0.6) {
             if (char.stamina < 30) {
                 this._setState('retreat');
-            } else if (dist > 5) {
+            } else if (char.health < 30 && dist < 4) {
+                this._setState('retreat');
+            } else if (dist > 6) {
+                this._setState(Math.random() < this.aggression ? 'rushdown' : 'approach');
+            } else if (dist > 3) {
                 this._setState('approach');
             } else {
                 this._setState('circle');
@@ -141,42 +181,71 @@ export class BotAI {
         }
     }
 
-    _approach(char, dist, angle, dt) {
+    _approach(char, target, dist, angle, dt) {
         const intent = char.intent;
         intent.moveX = Math.sin(angle);
         intent.moveZ = Math.cos(angle);
-        intent.sprint = dist > 8;
+        intent.sprint = dist > 7;
 
-        if (dist < 3.2) {
-            this._setState(Math.random() < 0.6 ? 'attack' : 'circle');
-            this.comboCount = 0;
+        if (dist < 3) {
+            const roll = Math.random();
+            if (roll < this.aggression * 0.8) {
+                this._setState('attack');
+                this.comboCount = 0;
+            } else {
+                this._setState('circle');
+            }
         }
-        if (this.stateTimer > 3.5) {
+        if (this.stateTimer > 3) this._setState('circle');
+    }
+
+    _rushdown(char, target, dist, angle, dt) {
+        const intent = char.intent;
+        intent.moveX = Math.sin(angle);
+        intent.moveZ = Math.cos(angle);
+        intent.sprint = true;
+
+        if (dist < 3) {
+            if (Math.random() < 0.5) {
+                intent.lightAttack = true;
+            } else {
+                intent.grab = true;
+            }
             this._setState('circle');
         }
+        if (this.stateTimer > 3) this._setState('approach');
     }
 
     _circle(char, target, dist, angle, dt) {
         const intent = char.intent;
-        const strafeAngle = angle + (Math.PI / 2) * this.circleDir;
-        const approachF = dist > 4 ? 0.5 : (dist < 2.2 ? -0.4 : 0);
+        const sAngle = angle + (Math.PI / 2) * this.circleDir;
+        const approach = dist > 4 ? 0.5 : (dist < 2 ? -0.45 : 0);
 
-        intent.moveX = Math.sin(strafeAngle) * 0.65 + Math.sin(angle) * approachF;
-        intent.moveZ = Math.cos(strafeAngle) * 0.65 + Math.cos(angle) * approachF;
+        intent.moveX = Math.sin(sAngle) * 0.6 + Math.sin(angle) * approach;
+        intent.moveZ = Math.cos(sAngle) * 0.6 + Math.cos(angle) * approach;
 
-        if (this.stateTimer > this.stateThreshold + 0.6) {
+        if (this.stateTimer > this.stateThreshold + this.patience * 0.5) {
             const roll = Math.random();
-            if (roll < 0.35 && dist < 3) {
+            const inRange = dist < 3;
+
+            if (roll < 0.3 && inRange) {
                 this._setState('attack');
                 this.comboCount = 0;
-            } else if (roll < 0.50 && dist < 2.2) {
+            } else if (roll < 0.45 && inRange && this.preferGrab && char.stamina >= 25) {
                 intent.grab = true;
                 this._setState('idle');
-            } else if (roll < 0.6) {
+            } else if (roll < 0.55 && inRange && char.stamina >= 25) {
+                this.doingHeavy = true;
+                this.heavyTimer = 0.4 + Math.random() * 0.9;
+                intent.heavyCharge = true;
+                this._setState('idle');
+            } else if (roll < 0.65) {
                 this.circleDir *= -1;
                 this._setState('circle');
-            } else if (char.stamina < 35) {
+            } else if (char.stamina < 40) {
                 this._setState('retreat');
+            } else if (roll < 0.8 && dist > 5) {
+                this._setState('rushdown');
             } else {
                 this._setState('approach');
             }
@@ -186,18 +255,23 @@ export class BotAI {
     _attack(char, target, dist, angle, dt) {
         const intent = char.intent;
 
-        if (dist > 2.5) {
-            intent.moveX = Math.sin(angle) * 0.5;
-            intent.moveZ = Math.cos(angle) * 0.5;
+        if (dist > 2.8) {
+            intent.moveX = Math.sin(angle) * 0.6;
+            intent.moveZ = Math.cos(angle) * 0.6;
         }
 
         if (char.state === CharState.IDLE || char.state === CharState.WALK) {
-            if (this.comboCount < 3 && dist < 3) {
-                if (Math.random() < 0.2 && this.comboCount === 0 && dist < 2.8) {
+            if (this.comboCount < 3 && dist < 3.2) {
+                const roll = Math.random();
+
+                if (this.comboCount === 0 && roll < 0.25 && dist < 2.5) {
                     this.doingHeavy = true;
-                    this.heavyTimer = 0.3 + Math.random() * 0.8;
+                    this.heavyTimer = 0.3 + Math.random() * 1.0;
                     intent.heavyCharge = true;
                     this._setState('idle');
+                } else if (this.comboCount === 0 && roll < 0.4 && dist < 2.2 && char.stamina >= 25) {
+                    intent.grab = true;
+                    this._setState('circle');
                 } else {
                     intent.lightAttack = true;
                     this.comboCount++;
@@ -207,34 +281,44 @@ export class BotAI {
             }
         }
 
-        if (this.stateTimer > 2.5) {
-            this._setState('circle');
-        }
+        if (this.stateTimer > 2.2) this._setState('circle');
     }
 
-    _retreat(char, dist, angle, dt) {
+    _retreat(char, target, dist, angle, dt) {
         const intent = char.intent;
         intent.moveX = -Math.sin(angle);
         intent.moveZ = -Math.cos(angle);
+        intent.sprint = dist < 4;
 
-        if (dist < 2.5 && Math.random() < 0.5 * dt && !this.blocking) {
+        if (dist < 2.8 && Math.random() < 0.6 * dt && !this.blocking) {
             this.blocking = true;
-            this.blockTimer = 0.4 + Math.random() * 0.8;
+            this.blockTimer = 0.3 + Math.random() * 0.6;
             intent.block = true;
         }
 
-        if (char.stamina > 60 || this.stateTimer > 2.5) {
-            this._setState('approach');
+        if (dist < 2 && Math.random() < 0.4 * dt) {
+            intent.dodge = true;
+            const away = angleBetween(target.position.x, target.position.z, char.position.x, char.position.z);
+            char.facing = away;
+        }
+
+        if (char.stamina > 65 || this.stateTimer > 2) {
+            this._setState(Math.random() < this.aggression ? 'rushdown' : 'approach');
         }
     }
 
     _avoidEdge(char) {
-        const distCenter = Math.sqrt(char.position.x ** 2 + char.position.z ** 2);
-        if (distCenter > 19) {
-            const panic = Math.min((distCenter - 19) / 7, 1) * 1.5;
-            const toCenter = Math.atan2(-char.position.x, -char.position.z);
-            char.intent.moveX += Math.sin(toCenter) * panic;
-            char.intent.moveZ += Math.cos(toCenter) * panic;
+        const dCenter = Math.sqrt(char.position.x ** 2 + char.position.z ** 2);
+        if (dCenter > 18) {
+            const panic = Math.min((dCenter - 18) / 8, 1) * 1.8;
+            const toC = Math.atan2(-char.position.x, -char.position.z);
+            char.intent.moveX += Math.sin(toC) * panic;
+            char.intent.moveZ += Math.cos(toC) * panic;
+
+            if (dCenter > 22 && char.stamina >= 20 && Math.random() < 0.02) {
+                char.intent.dodge = true;
+                char.facing = toC;
+            }
         }
     }
 

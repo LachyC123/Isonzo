@@ -209,13 +209,18 @@ export class Game {
 
             if (hit.damage > 0) {
                 const color = hit.damage >= 18 ? 0xffaa22 : 0xffffff;
-                this.scene.spawnHitParticles(hit.target.position, color, hit.damage >= 18 ? 14 : 6);
+                const count = hit.damage >= 20 ? 16 : (hit.damage >= 12 ? 10 : 6);
+                this.scene.spawnHitParticles(hit.target.position, color, count);
+                this.scene.spawnSpeedLines(hit.target.position, 0, color);
                 if (hit.damage >= 15) {
                     this.scene.spawnImpactRing(hit.target.position);
                 }
+                if (hit.damage >= 20) {
+                    this.scene.spawnDustCloud(hit.target.position);
+                }
             }
             if (hit.isGrab) {
-                this.scene.spawnHitParticles(hit.target.position, 0xffdd44, 5);
+                this.scene.spawnHitParticles(hit.target.position, 0xffdd44, 8);
             }
 
             if (hit.isKO) this._handleKO(hit.target, hit.attacker);
@@ -230,8 +235,12 @@ export class Game {
 
         for (const c of this.characters) {
             if (c.state === CharState.GROUND_BOUNCE && c.stateTimer < 0.05) {
-                this.scene.spawnHitParticles(c.position, 0xcccccc, 4);
-                this.scene.shake(0.15);
+                this.scene.spawnHitParticles(c.position, 0x998877, 6);
+                this.scene.spawnDustCloud(c.position);
+                this.scene.shake(0.18);
+            }
+            if (c.landingTimer > 0 && c.landingTimer < 0.02 + dt) {
+                this.scene.spawnDustCloud(c.position);
             }
         }
 

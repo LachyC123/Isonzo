@@ -1,4 +1,5 @@
 import { CharState } from './character.js';
+import * as Audio from './audio.js';
 
 const GRAVITY = -35;
 const ARENA_RADIUS = 26;
@@ -37,14 +38,16 @@ export function updatePhysics(char, dt) {
             if ((char.state === CharState.LAUNCHED || char.state === CharState.GROUND_BOUNCE)
                 && impactSpeed > 5 && char.bounceCount < 3) {
                 char.position.y = GROUND_Y;
-                char.velocity.y = impactSpeed * 0.35;
+                char.velocity.y = impactSpeed * 0.3;
                 char.knockbackVel.y = 0;
-                char.knockbackVel.x *= 0.5;
-                char.knockbackVel.z *= 0.5;
+                char.knockbackVel.x *= 0.45;
+                char.knockbackVel.z *= 0.45;
                 char.grounded = false;
                 char.bounceCount++;
                 char.state = CharState.GROUND_BOUNCE;
                 char.stateTimer = 0;
+                char.landingTimer = 0.12;
+                Audio.playBounce();
             } else {
                 char.position.y = GROUND_Y;
                 char.velocity.y = 0;
