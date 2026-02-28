@@ -6,6 +6,7 @@ const ATTACKING_STATES = new Set([
     CharState.HEAVY_RELEASE, CharState.GRAB, CharState.GRAB_SLAM,
     CharState.ELBOW_DROP, CharState.SPECIAL_UPPERCUT,
     CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
+    CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
 ]);
 
 const BUSY_STATES = new Set([
@@ -17,6 +18,7 @@ const BUSY_STATES = new Set([
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
     CharState.ELBOW_DROP, CharState.BLOCK, CharState.BLOCK_STAGGER,
     CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
+    CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
 ]);
 
 export class BotAI {

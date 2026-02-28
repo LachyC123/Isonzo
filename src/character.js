@@ -15,6 +15,8 @@ export const CharState = {
     SPECIAL_UPPERCUT: 'special_uppercut',
     SPECIAL_DROPKICK: 'special_dropkick',
     SPECIAL_SPIN: 'special_spin',
+    SPECIAL_LARIAT: 'special_lariat',
+    SPECIAL_SUPLEX: 'special_suplex',
     DODGE: 'dodge',
     GRAB: 'grab',
     GRAB_HOLD: 'grab_hold',
@@ -36,6 +38,7 @@ export const ACTION_STATES = new Set([
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
     CharState.ELBOW_DROP,
     CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
+    CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
     CharState.DODGE, CharState.GRAB, CharState.GRAB_HOLD,
     CharState.GRAB_SLAM, CharState.GRABBED, CharState.BLOCK,
     CharState.BLOCK_STAGGER,
@@ -642,6 +645,55 @@ export function updateCharacterAnimation(char, dt) {
             p.lFist.material.emissiveIntensity = glow;
             p.rFist.material.emissive.setHex(0x44aaff);
             p.rFist.material.emissiveIntensity = glow;
+            break;
+        }
+        case CharState.SPECIAL_LARIAT: {
+            const T = char.stateTimer;
+            const wind = Math.min(T / 0.12, 1);
+            const spin = T < 0.12 ? 0 : Math.min((T - 0.12) / 0.3, 1);
+            const rec = T < 0.42 ? 0 : Math.min((T - 0.42) / 0.14, 1);
+            const active = spin * (1 - rec);
+
+            p.torso.rotation.y = -0.45 * wind + spin * Math.PI * 1.9;
+            p.chest.rotation.y = -0.2 * wind + spin * Math.PI * 0.55;
+            p.torso.rotation.x = 0.18 * active;
+            p.lUpperArm.pivot.rotation.set(-1.45, 0, 1.05);
+            p.rUpperArm.pivot.rotation.set(-1.2 + 0.3 * active, 0, -0.25);
+            p.lForearm.pivot.rotation.x = -0.1;
+            p.rForearm.pivot.rotation.x = -0.95;
+            p.lThigh.pivot.rotation.x = 0.15 * wind - 0.2 * active;
+            p.rThigh.pivot.rotation.x = -0.12 * wind + 0.18 * active;
+            p.lShin.pivot.rotation.x = 0.14 * active;
+            p.rShin.pivot.rotation.x = 0.09;
+
+            p.lFist.material.emissive.setHex(0xff6611);
+            p.lFist.material.emissiveIntensity = active * 0.95;
+            break;
+        }
+        case CharState.SPECIAL_SUPLEX: {
+            const T = char.stateTimer;
+            const dip = easeOut(Math.min(T / 0.15, 1));
+            const lift = T < 0.15 ? 0 : easeOut(Math.min((T - 0.15) / 0.14, 1));
+            const snap = T < 0.29 ? 0 : easeIn(Math.min((T - 0.29) / 0.14, 1));
+
+            p.torso.position.y = 1.1 - dip * 0.24 + lift * 0.34 - snap * 0.16;
+            p.chest.position.y = 1.44 - dip * 0.18 + lift * 0.26 - snap * 0.12;
+            p.torso.rotation.x = 0.28 * dip - 0.22 * lift + 0.58 * snap;
+            p.chest.rotation.x = 0.12 * dip + 0.18 * snap;
+            p.lUpperArm.pivot.rotation.set(-1.6 + 0.45 * lift, 0, 0.22);
+            p.rUpperArm.pivot.rotation.set(-1.6 + 0.45 * lift, 0, -0.22);
+            p.lForearm.pivot.rotation.x = -0.25 - 0.5 * lift;
+            p.rForearm.pivot.rotation.x = -0.25 - 0.5 * lift;
+            p.lThigh.pivot.rotation.x = 0.35 * dip - 0.18 * lift + 0.42 * snap;
+            p.rThigh.pivot.rotation.x = -0.16 * dip + 0.18 * lift + 0.35 * snap;
+            p.lShin.pivot.rotation.x = -0.16 * dip - 0.22 * snap;
+            p.rShin.pivot.rotation.x = 0.08 - 0.2 * snap;
+
+            const glow = Math.max(lift, snap) * 0.75;
+            p.lForearm.mesh.material.emissive.setHex(0x66bbff);
+            p.lForearm.mesh.material.emissiveIntensity = glow;
+            p.rForearm.mesh.material.emissive.setHex(0x66bbff);
+            p.rForearm.mesh.material.emissiveIntensity = glow;
             break;
         }
         case CharState.BLOCK_STAGGER: {

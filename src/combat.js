@@ -34,6 +34,14 @@ const ATTACKS = {
         damage: 15, knockback: 11, range: 3.2, halfAngle: 180,
         hitStart: 0.05, hitEnd: 0.4, duration: 0.55, launch: 3,
     },
+    [CharState.SPECIAL_LARIAT]: {
+        damage: 20, knockback: 16, range: 3.2, halfAngle: 130,
+        hitStart: 0.14, hitEnd: 0.42, duration: 0.56, launch: 6,
+    },
+    [CharState.SPECIAL_SUPLEX]: {
+        damage: 26, knockback: 20, range: 2.2, halfAngle: 95,
+        hitStart: 0.26, hitEnd: 0.4, duration: 0.52, launch: 12,
+    },
     [CharState.GRAB]: {
         damage: 0, knockback: 0, range: 2.1, halfAngle: 60,
         hitStart: 0.08, hitEnd: 0.2, duration: 0.42, launch: 0,
@@ -364,6 +372,34 @@ function handleActionState(char, dt) {
             if (char.stateTimer >= 0.55) exitAction(char);
             break;
         }
+        case CharState.SPECIAL_LARIAT: {
+            if (char.stateTimer < 0.12) {
+                char.velocity.x *= 0.85;
+                char.velocity.z *= 0.85;
+            } else if (char.stateTimer < 0.42) {
+                char.velocity.x = Math.sin(char.facing) * 12;
+                char.velocity.z = Math.cos(char.facing) * 12;
+            } else {
+                char.velocity.x *= 0.78;
+                char.velocity.z *= 0.78;
+            }
+            if (char.stateTimer >= 0.56) exitAction(char);
+            break;
+        }
+        case CharState.SPECIAL_SUPLEX: {
+            if (char.stateTimer < 0.15) {
+                char.velocity.x *= 0.7;
+                char.velocity.z *= 0.7;
+            } else if (char.stateTimer < 0.28) {
+                char.velocity.x = Math.sin(char.facing) * 5;
+                char.velocity.z = Math.cos(char.facing) * 5;
+            } else {
+                char.velocity.x *= 0.82;
+                char.velocity.z *= 0.82;
+            }
+            if (char.stateTimer >= 0.52) exitAction(char);
+            break;
+        }
         case CharState.BLOCK:
             char.velocity.x = 0;
             char.velocity.z = 0;
@@ -491,7 +527,10 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             if (attacker.buffs.throwUp) knockback *= 1.5;
 
             let blocked = false;
-            const isSpecial = [CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN].includes(attacker.state);
+            const isSpecial = [
+                CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
+                CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
+            ].includes(attacker.state);
             if (target.state === CharState.BLOCK) {
                 damage *= 0.15;
                 knockback *= 0.15;
