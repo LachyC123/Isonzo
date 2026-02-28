@@ -325,7 +325,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 );
             }
 
-            results.push({ attacker, target, damage, isKO: target.health <= 0 });
+            results.push({ attacker, target, damage, isHeavy, blocked, isKO: target.health <= 0 });
             break;
         }
     }
