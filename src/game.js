@@ -213,6 +213,7 @@ export class Game {
                 this.comboCount++;
                 this.comboTimer = 2;
                 this.ui.updateCombo(this.comboCount);
+                if (hit.damage > 0) this.ui.showHitConfirm(hit.damage >= 16);
             }
 
             if (hit.damage > 0) {
@@ -233,6 +234,7 @@ export class Game {
 
                 if (hit.target === this.player) {
                     this.ui.flashScreen(isHuge ? 'white' : 'red');
+                    this.ui.pulsePlayerDamage();
                 }
 
                 if (hit.blocked) {
