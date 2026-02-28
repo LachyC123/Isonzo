@@ -528,7 +528,7 @@ export function updateCharacterAnimation(char, dt) {
             p.lShin.pivot.rotation.x = -0.4;
             p.rShin.pivot.rotation.x = -0.2;
 
-            char.mesh.position.y = char.position.y + lift * 1.2;
+            char.mesh.position.set(char.position.x, char.position.y + lift * 1.2, char.position.z);
             char.mesh.rotation.y = char.facing;
             p.shadow.position.y = -char.position.y - lift * 1.2 + 0.02;
             return;

@@ -323,6 +323,12 @@ export class Game {
         victim.alive = false;
         victim.state = CharState.KO;
         victim.stateTimer = 0;
+        if (victim.grabTarget) {
+            victim.grabTarget.grabbedBy = null;
+            victim.grabTarget.state = CharState.IDLE;
+            victim.grabTarget.stateTimer = 0;
+            victim.grabTarget = null;
+        }
         if (victim.grabbedBy) {
             victim.grabbedBy.grabTarget = null;
             victim.grabbedBy = null;
@@ -340,6 +346,12 @@ export class Game {
         char.alive = false;
         char.state = CharState.RINGOUT;
         char.stateTimer = 0;
+        if (char.grabTarget) {
+            char.grabTarget.grabbedBy = null;
+            char.grabTarget.state = CharState.IDLE;
+            char.grabTarget.stateTimer = 0;
+            char.grabTarget = null;
+        }
         if (char.grabbedBy) {
             char.grabbedBy.grabTarget = null;
             char.grabbedBy = null;

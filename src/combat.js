@@ -225,6 +225,11 @@ function handleActionState(char, dt) {
         case CharState.GRAB_HOLD: {
             char.velocity.x = 0;
             char.velocity.z = 0;
+            if (!char.grabTarget || !char.grabTarget.alive) {
+                char.grabTarget = null;
+                exitAction(char);
+                break;
+            }
             if (char.stateTimer >= 0.55) {
                 enterState(char, CharState.GRAB_SLAM);
             }
@@ -249,17 +254,21 @@ function handleActionState(char, dt) {
                     t.grabbedBy = null;
 
                     const dir = char.facing;
-                    const kb = 16;
+                    let kb = 16;
+                    let slamDmg = 18;
+                    if (char.buffs.damageUp) slamDmg *= 1.3;
+                    if (char.buffs.throwUp) { kb *= 1.5; slamDmg *= 1.3; }
+
                     t.knockbackVel.set(
                         Math.sin(dir) * kb,
                         8,
                         Math.cos(dir) * kb,
                     );
-                    t.health -= 18;
+                    t.health -= slamDmg;
                     t.grounded = false;
                     t.bounceCount = 0;
 
-                    char.damageDealt += 18;
+                    char.damageDealt += slamDmg;
                     char.grabTarget = null;
                     Audio.playHeavyHit();
                 }
@@ -287,12 +296,6 @@ function handleActionState(char, dt) {
             }
             break;
         case CharState.GROUND_BOUNCE:
-            if (char.stateTimer < 0.05 && char.bounceCount <= 2) {
-                char.velocity.y = 5 / char.bounceCount;
-                char.knockbackVel.x *= 0.4;
-                char.knockbackVel.z *= 0.4;
-                char.grounded = false;
-            }
             if (char.stateTimer >= 0.6 && char.grounded) {
                 exitAction(char);
             }
