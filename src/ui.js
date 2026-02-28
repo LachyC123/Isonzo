@@ -14,12 +14,16 @@ export class UIManager {
         this.mobileControls = document.getElementById('mobile-controls');
         this.lockOnEl = document.getElementById('lock-on-marker');
         this.hitFlash = document.getElementById('hit-flash');
+        this.hitConfirm = document.getElementById('hit-confirm');
+        this.playerStats = document.getElementById('player-stats');
 
         this._comboTimer = 0;
         this._announcerTimeout = null;
         this._flashTimeout = null;
         this._slowMoTimer = 0;
         this._slowMoCallback = null;
+        this._hitConfirmTimeout = null;
+        this._damagePulseTimeout = null;
     }
 
     showScreen(id) {
@@ -96,7 +100,27 @@ export class UIManager {
         if (this._flashTimeout) clearTimeout(this._flashTimeout);
         this._flashTimeout = setTimeout(() => {
             this.hitFlash.className = '';
-        }, 100);
+        }, type === 'white' ? 120 : 90);
+    }
+
+    showHitConfirm(isHeavy = false) {
+        if (!this.hitConfirm) return;
+        this.hitConfirm.className = isHeavy ? 'active heavy' : 'active';
+        if (this._hitConfirmTimeout) clearTimeout(this._hitConfirmTimeout);
+        this._hitConfirmTimeout = setTimeout(() => {
+            this.hitConfirm.className = '';
+        }, isHeavy ? 180 : 130);
+    }
+
+    pulsePlayerDamage() {
+        if (!this.playerDmg || !this.playerStats) return;
+        this.playerDmg.classList.add('hit-pulse');
+        this.playerStats.classList.add('hit-pulse');
+        if (this._damagePulseTimeout) clearTimeout(this._damagePulseTimeout);
+        this._damagePulseTimeout = setTimeout(() => {
+            this.playerDmg.classList.remove('hit-pulse');
+            this.playerStats.classList.remove('hit-pulse');
+        }, 180);
     }
 
     showAnnouncer(text, duration = 2) {
@@ -113,6 +137,9 @@ export class UIManager {
         if (count > 1) {
             this.comboCount.textContent = count;
             this._comboTimer = 2;
+            this.comboMeter.classList.remove('pop');
+            this.comboCount.offsetWidth;
+            this.comboMeter.classList.add('pop');
         }
     }
 
@@ -127,6 +154,8 @@ export class UIManager {
         const el = document.createElement('div');
         el.className = 'damage-number' + (isCrit ? ' crit' : '');
         el.textContent = Math.round(amount);
+        el.style.setProperty('--drift-x', `${(Math.random() * 36 - 18).toFixed(1)}px`);
+        el.style.setProperty('--tilt', `${(Math.random() * 16 - 8).toFixed(1)}deg`);
         el.style.left = `${sx}px`;
         el.style.top = `${sy}px`;
         this.damageContainer.appendChild(el);
