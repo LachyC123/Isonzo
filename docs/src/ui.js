@@ -6,6 +6,7 @@ export class UIManager {
         this.comboMeter = document.getElementById('combo-meter');
         this.comboCount = document.getElementById('combo-count');
         this.damageContainer = document.getElementById('damage-numbers');
+        this.hitBursts = document.getElementById('hit-bursts');
         this.aliveCount = document.getElementById('alive-count');
         this.roundText = document.getElementById('round-text');
         this.roundTimer = document.getElementById('round-timer');
@@ -20,6 +21,7 @@ export class UIManager {
         this._comboTimer = 0;
         this._announcerTimeout = null;
         this._hitFlashTimer = 0;
+        this._impactPulseTimer = 0;
     }
 
     showScreen(id) {
@@ -96,6 +98,13 @@ export class UIManager {
             this.hitFlash.classList.remove('strong');
         }
 
+        if (this._impactPulseTimer > 0) {
+            this._impactPulseTimer -= dt;
+            document.body.classList.add('impact-pulse');
+        } else {
+            document.body.classList.remove('impact-pulse');
+        }
+
         if (this._comboTimer > 0) {
             this._comboTimer -= dt;
             this.comboMeter.classList.add('visible');
@@ -142,6 +151,41 @@ export class UIManager {
         this.damageContainer.appendChild(el);
 
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 900);
+    }
+
+    spawnHitBurst(worldPos, camera, options = {}) {
+        if (!this.hitBursts) return;
+
+        const v = new THREE.Vector3(worldPos.x, worldPos.y + 1.1, worldPos.z);
+        v.project(camera);
+        if (v.z > 1 || v.z < 0) return;
+
+        const sx = (v.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+
+        const severity = options.severity || 'light';
+        const blocked = options.blocked ? ' blocked' : '';
+
+        const burst = document.createElement('div');
+        burst.className = `hit-burst ${severity}${blocked}`;
+        burst.style.left = `${sx}px`;
+        burst.style.top = `${sy}px`;
+
+        for (let i = 0; i < 4; i++) {
+            const spark = document.createElement('span');
+            spark.className = 'spark';
+            spark.style.setProperty('--a', `${(i / 4) * 360}deg`);
+            burst.appendChild(spark);
+        }
+
+        this.hitBursts.appendChild(burst);
+
+        if (severity === 'heavy') this._impactPulseTimer = Math.max(this._impactPulseTimer, 0.16);
+        if (severity === 'ko') this._impactPulseTimer = Math.max(this._impactPulseTimer, 0.24);
+
+        setTimeout(() => {
+            if (burst.parentNode) burst.parentNode.removeChild(burst);
+        }, severity === 'ko' ? 520 : 420);
     }
 
     triggerHitFlash(strong = false) {
