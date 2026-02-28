@@ -8,15 +8,18 @@ export class UIManager {
         this.damageContainer = document.getElementById('damage-numbers');
         this.aliveCount = document.getElementById('alive-count');
         this.roundText = document.getElementById('round-text');
+        this.roundTimer = document.getElementById('round-timer');
         this.playerHealthBar = document.getElementById('player-health');
         this.playerHealthText = document.getElementById('player-health-text');
         this.playerStaminaBar = document.getElementById('player-stamina');
         this.enemyContainer = document.getElementById('enemy-stats-container');
         this.mobileControls = document.getElementById('mobile-controls');
         this.lockOnEl = document.getElementById('lock-on-marker');
+        this.hitFlash = document.getElementById('hit-flash');
 
         this._comboTimer = 0;
         this._announcerTimeout = null;
+        this._hitFlashTimer = 0;
     }
 
     showScreen(id) {
@@ -49,7 +52,7 @@ export class UIManager {
         }
     }
 
-    updateHUD(player, enemies, camera, dt) {
+    updateHUD(player, enemies, camera, dt, roundElapsed = 0) {
         if (this.playerHealthBar) {
             const hp = Math.max(0, player.health);
             this.playerHealthBar.style.width = `${hp}%`;
@@ -64,6 +67,14 @@ export class UIManager {
             this.playerStaminaBar.style.width = `${sp}%`;
         }
 
+
+        if (this.roundTimer) {
+            const seconds = Math.max(0, Math.floor(roundElapsed));
+            const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const ss = String(seconds % 60).padStart(2, '0');
+            this.roundTimer.textContent = `${mm}:${ss}`;
+        }
+
         for (const e of enemies) {
             const bar = document.getElementById(`enemy-health-${e.name}`);
             if (bar) bar.style.width = `${Math.max(0, e.health)}%`;
@@ -74,6 +85,17 @@ export class UIManager {
         const alive = [player, ...enemies].filter(c => c.alive).length;
         if (this.aliveCount) this.aliveCount.textContent = alive;
 
+        if (this._hitFlashTimer > 0) {
+            this._hitFlashTimer -= dt;
+            if (this.hitFlash) {
+                const alpha = Math.min(1, this._hitFlashTimer * 8);
+                this.hitFlash.style.opacity = `${alpha}`;
+            }
+        } else if (this.hitFlash) {
+            this.hitFlash.style.opacity = '0';
+            this.hitFlash.classList.remove('strong');
+        }
+
         if (this._comboTimer > 0) {
             this._comboTimer -= dt;
             this.comboMeter.classList.add('visible');
@@ -82,13 +104,15 @@ export class UIManager {
         }
     }
 
-    showAnnouncer(text, duration = 2) {
+    showAnnouncer(text, duration = 2, power = false) {
         if (!this.announcer) return;
         this.announcer.textContent = text;
         this.announcer.classList.add('visible');
+        this.announcer.classList.toggle('power', power);
         if (this._announcerTimeout) clearTimeout(this._announcerTimeout);
         this._announcerTimeout = setTimeout(() => {
             this.announcer.classList.remove('visible');
+            this.announcer.classList.remove('power');
         }, duration * 1000);
     }
 
@@ -96,6 +120,9 @@ export class UIManager {
         if (count > 1) {
             this.comboCount.textContent = count;
             this._comboTimer = 2;
+            if (count === 3) this.showAnnouncer('COMBO!', 0.5, true);
+            if (count === 5) this.showAnnouncer('RAMPAGE!', 0.6, true);
+            if (count === 8) this.showAnnouncer('DOMINATING!', 0.7, true);
         }
     }
 
@@ -115,6 +142,13 @@ export class UIManager {
         this.damageContainer.appendChild(el);
 
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 900);
+    }
+
+    triggerHitFlash(strong = false) {
+        this._hitFlashTimer = strong ? 0.22 : 0.12;
+        if (!this.hitFlash) return;
+        this.hitFlash.style.opacity = '1';
+        this.hitFlash.classList.toggle('strong', strong);
     }
 
     updateRound(round, playerWins) {

@@ -44,6 +44,7 @@ export class Game {
         this.lockOnTarget = null;
         this.comboCount = 0;
         this.comboTimer = 0;
+        this.roundElapsed = 0;
     }
 
     init(canvas) {
@@ -121,6 +122,7 @@ export class Game {
         this.lockOnTarget = null;
         this.comboCount = 0;
         this.comboTimer = 0;
+        this.roundElapsed = 0;
 
         this.state = GameState.COUNTDOWN;
         this.stateTimer = 0;
@@ -186,6 +188,7 @@ export class Game {
     }
 
     _updatePlaying(dt) {
+        this.roundElapsed += dt;
         this._processPlayerInput();
 
         for (let i = 0; i < this.bots.length; i++) {
@@ -204,6 +207,9 @@ export class Game {
                 this.comboCount++;
                 this.comboTimer = 2;
                 this.ui.updateCombo(this.comboCount);
+            }
+            if (hit.attacker === this.player || hit.target === this.player) {
+                this.ui.triggerHitFlash(hit.isHeavy || hit.damage >= 20 || hit.isKO);
             }
             if (hit.isKO) this._handleKO(hit.target, hit.attacker);
         }
@@ -241,7 +247,7 @@ export class Game {
         }
 
         for (const c of this.characters) updateCharacterAnimation(c, dt);
-        this.ui.updateHUD(this.player, this.bots, this.scene.camera, dt);
+        this.ui.updateHUD(this.player, this.bots, this.scene.camera, dt, this.roundElapsed);
         this.ui.updateLockOn(this.lockOnTarget, this.scene.camera);
 
         this._checkRoundEnd();
