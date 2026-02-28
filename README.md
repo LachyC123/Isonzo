@@ -12,13 +12,13 @@ Any static file server works. For example:
 
 ```bash
 # Python
-cd docs && python3 -m http.server 8000
+python3 -m http.server 8000
 
 # Node (npx)
-npx serve docs
+npx serve .
 
 # PHP
-php -S localhost:8000 -t docs
+php -S localhost:8000
 ```
 
 Then open `http://localhost:8000` in your browser.
@@ -29,7 +29,7 @@ Then open `http://localhost:8000` in your browser.
 
 1. Go to **Settings → Pages** in your repository.
 2. Set the source to **Deploy from a branch**.
-3. Select the branch and set the folder to `/docs`.
+3. Select the branch and set the folder to `/ (root)`.
 4. Save — your game will be live at `https://<user>.github.io/<repo>/`.
 
 ## Game Overview
@@ -43,26 +43,25 @@ Then open `http://localhost:8000` in your browser.
 ## Project Structure
 
 ```
-docs/
-  index.html          Entry point (GitHub Pages)
-  styles.css           All UI styling
-  main.js              Game bootstrap
-  src/
-    game.js            Game state machine & loop
-    scene.js           Three.js scene, arena, camera
-    input.js           Keyboard & touch input
-    ui.js              HUD, menus, damage numbers
-    audio.js           WebAudio procedural SFX
-    physics.js         Gravity, collisions, bounds
-    character.js       Fighter model & animation
-    combat.js          Attack resolution & state machine
-    ai.js              Bot decision-making
-    items.js           Pickup spawning & buffs
-    utils.js           Math helpers & object pool
-  assets/              (procedurally generated — no external files)
-  meta/
-    design.md          Game design document
-    controls.md        Controls reference
+index.html             Entry point (GitHub Pages root)
+styles.css             All UI styling
+main.js                Game bootstrap
+src/
+  game.js              Game state machine & loop
+  scene.js             Three.js scene, arena, camera
+  input.js             Keyboard & touch input
+  ui.js                HUD, menus, damage numbers
+  audio.js             WebAudio procedural SFX
+  physics.js           Gravity, collisions, bounds
+  character.js         Fighter model & animation
+  combat.js            Attack resolution & state machine
+  ai.js                Bot decision-making
+  items.js             Pickup spawning & buffs
+  utils.js             Math helpers & object pool
+assets/                (procedurally generated — no external files)
+meta/
+  design.md            Game design document
+  controls.md          Controls reference
 ```
 
 ## Tech Stack
