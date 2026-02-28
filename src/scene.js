@@ -326,6 +326,41 @@ export class SceneManager {
         }
     }
 
+    spawnGroundCrack(pos) {
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.5;
+            const len = 0.8 + Math.random() * 1.5;
+            const geo = new THREE.PlaneGeometry(0.06, len);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xffaa44, transparent: true, opacity: 0.7,
+                side: THREE.DoubleSide,
+            });
+            const crack = new THREE.Mesh(geo, mat);
+            crack.position.set(
+                pos.x + Math.cos(angle) * len * 0.4,
+                0.03,
+                pos.z + Math.sin(angle) * len * 0.4,
+            );
+            crack.rotation.x = -Math.PI / 2;
+            crack.rotation.z = angle;
+            this.scene.add(crack);
+            this.trails.push({ mesh: crack, life: 0, maxLife: 0.8, type: 'crack' });
+        }
+    }
+
+    spawnShockwave(pos, color = 0xffffff) {
+        const geo = new THREE.RingGeometry(0.2, 0.5, 24);
+        const mat = new THREE.MeshBasicMaterial({
+            color, transparent: true, opacity: 0.6,
+            side: THREE.DoubleSide,
+        });
+        const ring = new THREE.Mesh(geo, mat);
+        ring.position.set(pos.x, 0.05, pos.z);
+        ring.rotation.x = -Math.PI / 2;
+        this.scene.add(ring);
+        this.trails.push({ mesh: ring, life: 0, maxLife: 0.4, type: 'shockwave' });
+    }
+
     spawnImpactRing(pos) {
         const geo = new THREE.RingGeometry(0.1, 0.3, 16);
         const mat = new THREE.MeshBasicMaterial({
@@ -374,6 +409,12 @@ export class SceneManager {
             } else if (tr.type === 'line') {
                 tr.mesh.material.opacity = 0.5 * (1 - t);
                 tr.mesh.scale.y = 1 + t * 2;
+            } else if (tr.type === 'crack') {
+                tr.mesh.material.opacity = 0.7 * (1 - t * t);
+            } else if (tr.type === 'shockwave') {
+                const scale = 1 + t * 8;
+                tr.mesh.scale.set(scale, scale, scale);
+                tr.mesh.material.opacity = 0.6 * (1 - t);
             }
         }
     }

@@ -12,12 +12,16 @@ export const CharState = {
     HEAVY_CHARGE: 'heavy_charge',
     HEAVY_RELEASE: 'heavy_release',
     ELBOW_DROP: 'elbow_drop',
+    SPECIAL_UPPERCUT: 'special_uppercut',
+    SPECIAL_DROPKICK: 'special_dropkick',
+    SPECIAL_SPIN: 'special_spin',
     DODGE: 'dodge',
     GRAB: 'grab',
     GRAB_HOLD: 'grab_hold',
     GRAB_SLAM: 'grab_slam',
     GRABBED: 'grabbed',
     BLOCK: 'block',
+    BLOCK_STAGGER: 'block_stagger',
     HITSTUN: 'hitstun',
     KNOCKBACK: 'knockback',
     LAUNCHED: 'launched',
@@ -31,8 +35,10 @@ export const ACTION_STATES = new Set([
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
     CharState.ELBOW_DROP,
+    CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
     CharState.DODGE, CharState.GRAB, CharState.GRAB_HOLD,
     CharState.GRAB_SLAM, CharState.GRABBED, CharState.BLOCK,
+    CharState.BLOCK_STAGGER,
     CharState.HITSTUN, CharState.KNOCKBACK, CharState.LAUNCHED,
     CharState.GROUND_BOUNCE, CharState.GETUP,
     CharState.KO, CharState.RINGOUT,
@@ -83,6 +89,7 @@ export function createCharacter(name, colorSet, isPlayer) {
         bounceCount: 0,
         sprintAttack: false,
         landingTimer: 0,
+        specialMove: null,
     };
 
     const root = new THREE.Group();
@@ -277,6 +284,7 @@ export function resetCharacter(char, x, z) {
     char.bounceCount = 0;
     char.sprintAttack = false;
     char.landingTimer = 0;
+    char.specialMove = null;
     char.mesh.position.copy(char.position);
     char.mesh.rotation.set(0, 0, 0);
     char.mesh.visible = true;
@@ -562,6 +570,97 @@ export function updateCharacterAnimation(char, dt) {
             p.lForearm.pivot.rotation.x = -0.6;
             break;
         }
+        case CharState.SPECIAL_UPPERCUT: {
+            const T = char.stateTimer;
+            const wind = Math.min(T / 0.12, 1);
+            const strike = T < 0.12 ? 0 : easeOut(Math.min((T - 0.12) / 0.1, 1));
+            const rec = T < 0.22 ? 0 : Math.min((T - 0.22) / 0.28, 1);
+            const up = strike * (1 - rec);
+            const crouch = wind * (1 - strike);
+
+            p.torso.position.y = 1.1 - crouch * 0.25 + up * 0.3;
+            p.chest.position.y = 1.44 - crouch * 0.2 + up * 0.25;
+            p.torso.rotation.x = 0.15 * crouch - 0.2 * up;
+            p.rUpperArm.pivot.rotation.x = 0.5 * crouch - 2.5 * up;
+            p.rUpperArm.pivot.rotation.z = -0.3;
+            p.rForearm.pivot.rotation.x = -0.3 * crouch - 0.8 * up;
+            p.lUpperArm.pivot.rotation.set(-0.4 * crouch, 0, 0.3);
+            p.lForearm.pivot.rotation.x = -0.7;
+            p.lThigh.pivot.rotation.x = 0.3 * crouch - 0.15 * up;
+            p.rThigh.pivot.rotation.x = -0.15 * crouch + 0.1 * up;
+            p.lShin.pivot.rotation.x = -0.2 * crouch;
+            p.hips.rotation.y = -0.2 * up;
+
+            p.rFist.material.emissive.setHex(0xffaa00);
+            p.rFist.material.emissiveIntensity = up * 1.2;
+            break;
+        }
+        case CharState.SPECIAL_DROPKICK: {
+            const T = char.stateTimer;
+            const leap = easeOut(Math.min(T / 0.1, 1));
+            const extend = T < 0.1 ? 0 : Math.min((T - 0.1) / 0.12, 1);
+            const rec = T < 0.3 ? 0 : Math.min((T - 0.3) / 0.2, 1);
+            const kick = extend * (1 - rec);
+
+            p.torso.rotation.x = -0.3 * leap + 0.8 * kick;
+            p.chest.rotation.x = 0.2 * kick;
+            p.lThigh.pivot.rotation.x = -1.5 * kick;
+            p.rThigh.pivot.rotation.x = -1.4 * kick;
+            p.lShin.pivot.rotation.x = -0.2 * kick;
+            p.rShin.pivot.rotation.x = -0.3 * kick;
+            p.lUpperArm.pivot.rotation.set(0.6 * kick, 0, 0.8 * kick);
+            p.rUpperArm.pivot.rotation.set(0.6 * kick, 0, -0.8 * kick);
+            p.lForearm.pivot.rotation.x = -0.3;
+            p.rForearm.pivot.rotation.x = -0.3;
+            p.head.rotation.x = -0.2 * kick;
+
+            p.lBoot.material.emissive.setHex(0xff4400);
+            p.lBoot.material.emissiveIntensity = kick * 0.8;
+            p.rBoot.material.emissive.setHex(0xff4400);
+            p.rBoot.material.emissiveIntensity = kick * 0.8;
+            break;
+        }
+        case CharState.SPECIAL_SPIN: {
+            const T = char.stateTimer;
+            const spin = easeOut(Math.min(T / 0.4, 1));
+            const rec = T < 0.4 ? 0 : Math.min((T - 0.4) / 0.15, 1);
+            const active = (1 - rec);
+            const spinAngle = spin * Math.PI * 4;
+
+            p.torso.rotation.y = spinAngle * active;
+            p.chest.rotation.y = spinAngle * 0.5 * active;
+            p.lUpperArm.pivot.rotation.set(0, 0, 1.2 * active);
+            p.rUpperArm.pivot.rotation.set(0, 0, -1.2 * active);
+            p.lForearm.pivot.rotation.x = -0.5;
+            p.rForearm.pivot.rotation.x = -0.5;
+            p.torso.position.y = 1.1 - 0.05 * active;
+            p.lThigh.pivot.rotation.x = 0.1 * active;
+            p.rThigh.pivot.rotation.x = -0.1 * active;
+
+            const glow = active * 0.6;
+            p.lFist.material.emissive.setHex(0x44aaff);
+            p.lFist.material.emissiveIntensity = glow;
+            p.rFist.material.emissive.setHex(0x44aaff);
+            p.rFist.material.emissiveIntensity = glow;
+            break;
+        }
+        case CharState.BLOCK_STAGGER: {
+            const T = char.stateTimer;
+            const stagger = easeOut(Math.min(T / 0.08, 1));
+            const rec = Math.max(0, (T - 0.15) / 0.2);
+            const active = stagger * (1 - rec);
+            const shake = Math.sin(t * 40) * 0.04 * active;
+
+            p.torso.rotation.x = 0.15 * active;
+            p.torso.position.x = shake;
+            p.chest.rotation.x = 0.1 * active;
+            p.head.rotation.x = 0.2 * active;
+            p.lUpperArm.pivot.rotation.set(0.3 * active, 0, 0.4 * active);
+            p.rUpperArm.pivot.rotation.set(0.3 * active, 0, -0.4 * active);
+            p.lForearm.pivot.rotation.x = -0.3;
+            p.rForearm.pivot.rotation.x = -0.3;
+            break;
+        }
         case CharState.DODGE: {
             const roll = Math.min(char.stateTimer / 0.35, 1);
             const rollAngle = easeOut(roll) * Math.PI * 2;
@@ -783,12 +882,15 @@ export function updateCharacterAnimation(char, dt) {
         }
     }
 
-    if (st !== CharState.HEAVY_CHARGE && st !== CharState.HEAVY_RELEASE) {
+    const glowStates = new Set([CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
+        CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN]);
+    if (!glowStates.has(st)) {
         p.rFist.material.emissiveIntensity = 0;
+        p.lFist.material.emissiveIntensity = 0;
         p.rUpperArm.mesh.material.emissiveIntensity = 0;
-        if (p.rForearm.mesh.material.emissiveIntensity) {
-            p.rForearm.mesh.material.emissiveIntensity = 0;
-        }
+        if (p.rForearm.mesh.material.emissiveIntensity) p.rForearm.mesh.material.emissiveIntensity = 0;
+        p.lBoot.material.emissiveIntensity = 0;
+        p.rBoot.material.emissiveIntensity = 0;
     }
 
     char.mesh.position.copy(char.position);

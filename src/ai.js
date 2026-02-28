@@ -4,7 +4,8 @@ import { distance2D, angleBetween } from './utils.js';
 const ATTACKING_STATES = new Set([
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_RELEASE, CharState.GRAB, CharState.GRAB_SLAM,
-    CharState.ELBOW_DROP,
+    CharState.ELBOW_DROP, CharState.SPECIAL_UPPERCUT,
+    CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
 ]);
 
 const BUSY_STATES = new Set([
@@ -14,7 +15,8 @@ const BUSY_STATES = new Set([
     CharState.GRAB_HOLD, CharState.GRAB_SLAM, CharState.GRABBED,
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
-    CharState.ELBOW_DROP, CharState.BLOCK,
+    CharState.ELBOW_DROP, CharState.BLOCK, CharState.BLOCK_STAGGER,
+    CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
 ]);
 
 export class BotAI {
@@ -156,6 +158,15 @@ export class BotAI {
             return true;
         }
 
+        if (target.state === CharState.BLOCK_STAGGER && dist < 3) {
+            if (char.specialMove) {
+                char.intent.heavyCharge = true;
+            } else {
+                char.intent.lightAttack = true;
+            }
+            return true;
+        }
+
         return false;
     }
 
@@ -264,7 +275,12 @@ export class BotAI {
             if (this.comboCount < 3 && dist < 3.2) {
                 const roll = Math.random();
 
-                if (this.comboCount === 0 && roll < 0.25 && dist < 2.5) {
+                if (char.specialMove && roll < 0.4 && dist < 3) {
+                    this.doingHeavy = true;
+                    this.heavyTimer = 0.01;
+                    intent.heavyCharge = true;
+                    this._setState('idle');
+                } else if (this.comboCount === 0 && roll < 0.25 && dist < 2.5) {
                     this.doingHeavy = true;
                     this.heavyTimer = 0.3 + Math.random() * 1.0;
                     intent.heavyCharge = true;

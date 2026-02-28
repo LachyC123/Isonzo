@@ -217,21 +217,32 @@ export class Game {
 
             if (hit.damage > 0) {
                 const isBig = hit.damage >= 16;
-                const color = isBig ? 0xffaa22 : 0xffffff;
-                const count = hit.damage >= 20 ? 18 : (hit.damage >= 12 ? 10 : 6);
+                const isHuge = hit.damage >= 22;
+                const color = isHuge ? 0xffaa00 : (isBig ? 0xffcc44 : 0xffffff);
+                const count = isHuge ? 22 : (isBig ? 12 : 6);
                 this.scene.spawnHitParticles(hit.target.position, color, count);
                 this.scene.spawnSpeedLines(hit.target.position, 0, color);
                 if (isBig) {
                     this.scene.spawnImpactRing(hit.target.position);
+                }
+                if (isHuge) {
                     this.scene.spawnDustCloud(hit.target.position);
+                    this.scene.spawnImpactRing(hit.target.position);
+                    this.scene.spawnGroundCrack(hit.target.position);
                 }
 
                 if (hit.target === this.player) {
-                    this.ui.flashScreen(isBig ? 'white' : 'red');
+                    this.ui.flashScreen(isHuge ? 'white' : 'red');
+                }
+
+                if (hit.blocked) {
+                    this.scene.spawnHitParticles(hit.target.position, 0x4488ff, 8);
+                    this.scene.shake(0.15);
                 }
             }
             if (hit.isGrab) {
-                this.scene.spawnHitParticles(hit.target.position, 0xffdd44, 8);
+                this.scene.spawnHitParticles(hit.target.position, 0xffdd44, 12);
+                this.scene.shake(0.2);
             }
         }
 
@@ -247,9 +258,13 @@ export class Game {
 
         for (const c of this.characters) {
             if (c.state === CharState.GROUND_BOUNCE && c.stateTimer < 0.05) {
-                this.scene.spawnHitParticles(c.position, 0x998877, 6);
+                this.scene.spawnHitParticles(c.position, 0x998877, 8);
                 this.scene.spawnDustCloud(c.position);
-                this.scene.shake(0.18);
+                this.scene.spawnShockwave(c.position, 0xddaa66);
+                this.scene.shake(0.25);
+                if (c.bounceCount <= 1) {
+                    this.scene.spawnGroundCrack(c.position);
+                }
             }
             if (c.landingTimer > 0 && c.landingTimer < 0.02 + dt) {
                 this.scene.spawnDustCloud(c.position);
@@ -259,8 +274,16 @@ export class Game {
         const pickup = this.items.update(dt, this.characters);
         if (pickup && pickup.picked) {
             Audio.playPickup();
-            this.ui.showAnnouncer(`${pickup.character.name}: ${pickup.type.name}`, 1);
-            this.scene.spawnHitParticles(pickup.character.position, 0x44ff44, 8);
+            const isMove = pickup.type.isMove;
+            const msg = isMove
+                ? `${pickup.character.name} got ${pickup.type.name}!`
+                : `${pickup.character.name}: ${pickup.type.name}`;
+            this.ui.showAnnouncer(msg, isMove ? 1.5 : 1);
+            const pColor = isMove ? pickup.type.color : 0x44ff44;
+            this.scene.spawnHitParticles(pickup.character.position, pColor, isMove ? 14 : 8);
+            if (isMove) {
+                this.scene.spawnImpactRing(pickup.character.position);
+            }
         }
 
         this._updateLockOn();
