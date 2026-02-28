@@ -39,7 +39,7 @@
                             <p><b>SHIFT</b> Sprint</p>
                             <p><b>SPACE</b> Jump</p>
                             <p><b>LMB / J</b> Light Attack</p>
-                            <p><b>RMB / K</b> Heavy (hold)</p>
+                            <p><b>RMB / K</b> Heavy (hold) / Special (when ready)</p>
                             <p><b>Q</b> Dodge Roll</p>
                             <p><b>E</b> Grab &amp; Throw</p>
                             <p><b>R</b> Block</p>
@@ -47,7 +47,7 @@
                         <div class="control-group">
                             <h3>MOBILE</h3>
                             <p><b>Stick</b> Move (push far = sprint)</p>
-                            <p><b>ATK</b> Attack (hold = heavy)</p>
+                            <p><b>ATK</b> Attack (hold = heavy / special when ready)</p>
                             <p><b>JMP</b> Jump</p>
                             <p><b>DGE</b> Dodge Roll</p>
                             <p><b>GRB</b> Grab &amp; Throw</p>
@@ -75,6 +75,7 @@
                     <div class="bar-container stamina-bar">
                         <div class="bar-fill" id="player-stamina"></div>
                     </div>
+                    <div id="special-indicator">SPECIAL READY</div>
                 </div>
 
                 <div id="round-tracker">
@@ -123,7 +124,7 @@
                 </div>
             </div>
             <div id="action-buttons">
-                <button class="action-btn" id="btn-atk">ATK</button>
+                <button class="action-btn" id="btn-atk">ATK/SP</button>
                 <button class="action-btn" id="btn-jmp">JMP</button>
                 <button class="action-btn" id="btn-dge">DGE</button>
                 <button class="action-btn" id="btn-grb">GRB</button>
