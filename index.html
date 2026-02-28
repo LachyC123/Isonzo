@@ -41,7 +41,7 @@
                             <p><b>LMB / J</b> Light Attack</p>
                             <p><b>RMB / K</b> Heavy (hold)</p>
                             <p><b>Q</b> Dodge Roll</p>
-                            <p><b>E</b> Grab</p>
+                            <p><b>E</b> Grab &amp; Throw</p>
                             <p><b>R</b> Block</p>
                         </div>
                         <div class="control-group">
@@ -50,11 +50,13 @@
                             <p><b>ATK</b> Attack (hold = heavy)</p>
                             <p><b>JMP</b> Jump</p>
                             <p><b>DGE</b> Dodge Roll</p>
-                            <p><b>GRB</b> Grab</p>
+                            <p><b>GRB</b> Grab &amp; Throw</p>
                             <p><b>BLK</b> Block (hold)</p>
                         </div>
                         <div class="control-group">
-                            <h3>COMBAT TRIANGLE</h3>
+                            <h3>HOW TO WIN</h3>
+                            <p>Knock opponents off the arena!</p>
+                            <p>Higher damage % = more knockback</p>
                             <p>Grab beats Block</p>
                             <p>Block beats Attack</p>
                             <p>Attack beats Grab</p>
@@ -66,12 +68,10 @@
 
             <!-- HUD -->
             <div id="hud" class="screen">
+                <!-- Player Damage % -->
                 <div id="player-stats">
                     <div class="player-name">YOU</div>
-                    <div class="bar-container health-bar">
-                        <div class="bar-fill" id="player-health"></div>
-                        <div class="bar-text" id="player-health-text">100</div>
-                    </div>
+                    <div class="dmg-pct" id="player-dmg">0%</div>
                     <div class="bar-container stamina-bar">
                         <div class="bar-fill" id="player-stamina"></div>
                     </div>
@@ -96,6 +96,7 @@
                 <div id="announcer"></div>
                 <div id="damage-numbers"></div>
                 <div id="lock-on-marker"></div>
+                <div id="hit-flash"></div>
 
                 <div id="alive-counter">
                     <span id="alive-count">4</span> ALIVE

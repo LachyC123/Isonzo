@@ -67,8 +67,8 @@ export function updatePhysics(char, dt) {
         char.stamina = Math.min(char.maxStamina, char.stamina + 22 * dt);
     }
 
-    if (char.buffs.regenUp) {
-        char.health = Math.min(char.maxHealth, char.health + 3 * dt);
+    if (char.buffs.regenUp && char.damage > 0) {
+        char.damage = Math.max(0, char.damage - 2 * dt);
     }
 }
 

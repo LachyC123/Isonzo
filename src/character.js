@@ -62,6 +62,7 @@ export function createCharacter(name, colorSet, isPlayer) {
         position: new THREE.Vector3(),
         velocity: new THREE.Vector3(),
         facing: 0,
+        damage: 0,
         health: 100, maxHealth: 100,
         stamina: 100, maxStamina: 100,
         staminaRegenDelay: 0,
@@ -253,6 +254,7 @@ export function resetCharacter(char, x, z) {
     char.velocity.set(0, 0, 0);
     char.knockbackVel.set(0, 0, 0);
     char.ragdollVel.set(0, 0, 0);
+    char.damage = 0;
     char.health = char.maxHealth;
     char.stamina = char.maxStamina;
     char.staminaRegenDelay = 0;

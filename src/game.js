@@ -17,6 +17,7 @@ const GameState = {
     MENU: 'menu',
     COUNTDOWN: 'countdown',
     PLAYING: 'playing',
+    SLOWMO: 'slowmo',
     ROUND_END: 'round_end',
     RESULTS: 'results',
 };
@@ -44,6 +45,9 @@ export class Game {
         this.lockOnTarget = null;
         this.comboCount = 0;
         this.comboTimer = 0;
+
+        this.slowMoTarget = null;
+        this.slowMoScale = 1;
     }
 
     init(canvas) {
@@ -121,6 +125,8 @@ export class Game {
         this.lockOnTarget = null;
         this.comboCount = 0;
         this.comboTimer = 0;
+        this.slowMoTarget = null;
+        this.slowMoScale = 1;
 
         this.state = GameState.COUNTDOWN;
         this.stateTimer = 0;
@@ -150,11 +156,12 @@ export class Game {
             case GameState.MENU: this._updateMenu(dt); break;
             case GameState.COUNTDOWN: this._updateCountdown(dt); break;
             case GameState.PLAYING: this._updatePlaying(dt); break;
+            case GameState.SLOWMO: this._updateSlowMo(dt); break;
             case GameState.ROUND_END: this._updateRoundEnd(dt); break;
             case GameState.RESULTS: break;
         }
 
-        this.scene.updateParticles(dt);
+        this.scene.updateParticles(dt * this.slowMoScale);
         this.scene.render();
         this.input.endFrame();
     }
@@ -187,6 +194,7 @@ export class Game {
     }
 
     _updatePlaying(dt) {
+        this.slowMoScale = 1;
         this._processPlayerInput();
 
         for (let i = 0; i < this.bots.length; i++) {
@@ -208,29 +216,33 @@ export class Game {
             }
 
             if (hit.damage > 0) {
-                const color = hit.damage >= 18 ? 0xffaa22 : 0xffffff;
-                const count = hit.damage >= 20 ? 16 : (hit.damage >= 12 ? 10 : 6);
+                const isBig = hit.damage >= 16;
+                const color = isBig ? 0xffaa22 : 0xffffff;
+                const count = hit.damage >= 20 ? 18 : (hit.damage >= 12 ? 10 : 6);
                 this.scene.spawnHitParticles(hit.target.position, color, count);
                 this.scene.spawnSpeedLines(hit.target.position, 0, color);
-                if (hit.damage >= 15) {
+                if (isBig) {
                     this.scene.spawnImpactRing(hit.target.position);
-                }
-                if (hit.damage >= 20) {
                     this.scene.spawnDustCloud(hit.target.position);
+                }
+
+                if (hit.target === this.player) {
+                    this.ui.flashScreen(isBig ? 'white' : 'red');
                 }
             }
             if (hit.isGrab) {
                 this.scene.spawnHitParticles(hit.target.position, 0xffdd44, 8);
             }
-
-            if (hit.isKO) this._handleKO(hit.target, hit.attacker);
         }
 
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) this.comboCount = 0;
 
+        const alive = this.characters.filter(c => c.alive);
         for (const c of this.characters) {
-            if (c.alive && checkRingOut(c)) this._handleRingOut(c);
+            if (c.alive && checkRingOut(c)) {
+                this._handleRingOut(c, alive.length);
+            }
         }
 
         for (const c of this.characters) {
@@ -275,6 +287,29 @@ export class Game {
         this.ui.updateLockOn(this.lockOnTarget, this.scene.camera);
 
         this._checkRoundEnd();
+    }
+
+    _updateSlowMo(dt) {
+        this.stateTimer += dt;
+        this.slowMoScale = 0.2;
+        const gameDt = dt * this.slowMoScale;
+
+        for (const c of this.characters) processCharacterState(c, gameDt);
+        for (const c of this.characters) updatePhysics(c, gameDt);
+        for (const c of this.characters) updateCharacterAnimation(c, gameDt);
+
+        if (this.slowMoTarget) {
+            this.scene.updateCamera(this.slowMoTarget.position, null, dt);
+        }
+
+        if (this.stateTimer >= 1.2) {
+            this.slowMoScale = 1;
+            this.slowMoTarget = null;
+            this._checkRoundEnd();
+            if (this.state === GameState.SLOWMO) {
+                this.state = GameState.PLAYING;
+            }
+        }
     }
 
     _processPlayerInput() {
@@ -328,29 +363,7 @@ export class Game {
         }
     }
 
-    _handleKO(victim, attacker) {
-        victim.alive = false;
-        victim.state = CharState.KO;
-        victim.stateTimer = 0;
-        if (victim.grabTarget) {
-            victim.grabTarget.grabbedBy = null;
-            victim.grabTarget.state = CharState.IDLE;
-            victim.grabTarget.stateTimer = 0;
-            victim.grabTarget = null;
-        }
-        if (victim.grabbedBy) {
-            victim.grabbedBy.grabTarget = null;
-            victim.grabbedBy = null;
-        }
-        if (attacker) attacker.kills++;
-        Audio.playKO();
-        this.scene.shake(0.6);
-        this.scene.spawnHitParticles(victim.position, 0xff4444, 20);
-        this.scene.spawnImpactRing(victim.position);
-        this.ui.showAnnouncer(`${victim.name} KO!`, 1.5);
-    }
-
-    _handleRingOut(char) {
+    _handleRingOut(char, aliveBeforeThis) {
         if (!char.alive) return;
         char.alive = false;
         char.state = CharState.RINGOUT;
@@ -363,10 +376,28 @@ export class Game {
         }
         if (char.grabbedBy) {
             char.grabbedBy.grabTarget = null;
+            char.grabbedBy.kills++;
             char.grabbedBy = null;
         }
+
+        const remaining = this.characters.filter(c => c.alive);
+        const lastNearEdge = remaining.length > 0 && remaining.some(c => {
+            const d = Math.sqrt(c.position.x ** 2 + c.position.z ** 2);
+            return d > 20 || c.state === CharState.LAUNCHED || c.state === CharState.KNOCKBACK;
+        });
+
         Audio.playRingOut();
-        this.ui.showAnnouncer(`${char.name} RING OUT!`, 1.5);
+        this.scene.shake(0.5);
+        this.scene.spawnHitParticles(char.position, 0xff6644, 16);
+
+        if (aliveBeforeThis <= 2) {
+            this.ui.showAnnouncer(`${char.name} ELIMINATED!`, 2);
+            this.state = GameState.SLOWMO;
+            this.stateTimer = 0;
+            this.slowMoTarget = char;
+        } else {
+            this.ui.showAnnouncer(`${char.name} OUT!`, 1.2);
+        }
     }
 
     _checkRoundEnd() {
@@ -391,6 +422,7 @@ export class Game {
 
     _updateRoundEnd(dt) {
         this.stateTimer += dt;
+        this.slowMoScale = 1;
 
         const camTarget = this.characters.find(c => c.alive) || this.player;
         this.scene.updateCamera(camTarget.position, null, dt);

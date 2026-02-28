@@ -290,13 +290,16 @@ function handleActionState(char, dt) {
                     tgt.grabbedBy = null;
 
                     const dir = char.facing;
-                    let kb = 16;
+                    let basekb = 16;
                     let dmg = 20;
                     if (char.buffs.damageUp) dmg *= 1.3;
-                    if (char.buffs.throwUp) { kb *= 1.5; dmg *= 1.3; }
+                    if (char.buffs.throwUp) { basekb *= 1.5; }
 
-                    tgt.knockbackVel.set(Math.sin(dir) * kb, 9, Math.cos(dir) * kb);
-                    tgt.health -= dmg;
+                    tgt.damage += dmg;
+                    const pctMult = 1 + (tgt.damage / 100) * 0.8;
+                    const finalKb = basekb * pctMult;
+
+                    tgt.knockbackVel.set(Math.sin(dir) * finalKb, 9 * pctMult, Math.cos(dir) * finalKb);
                     tgt.grounded = false;
                     tgt.bounceCount = 0;
                     char.damageDealt += dmg;
@@ -371,7 +374,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
 
                     if (isAttacking) {
                         enterState(attacker, CharState.HITSTUN);
-                        attacker.health -= 5;
+                        attacker.damage += 5;
                         Audio.playBlock();
                     } else {
                         Audio.playGrab();
@@ -430,8 +433,8 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
 
             let blocked = false;
             if (target.state === CharState.BLOCK) {
-                damage *= 0.25;
-                knockback *= 0.3;
+                damage *= 0.2;
+                knockback *= 0.2;
                 launchPow = 0;
                 blocked = true;
                 Audio.playBlock();
@@ -443,24 +446,24 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 Audio.playHit();
             }
 
-            target.health -= damage;
+            target.damage += damage;
             attacker.damageDealt += damage;
 
             const kbX = dist > 0.01 ? dx / dist : Math.sin(attacker.facing);
             const kbZ = dist > 0.01 ? dz / dist : Math.cos(attacker.facing);
-            const dmgMult = 1 + ((100 - Math.max(0, target.health)) / 100) * 0.7;
-            const fKB = knockback * dmgMult;
+            const pctMult = 1 + (target.damage / 100) * 0.8;
+            const fKB = knockback * pctMult;
 
             target.knockbackVel.x = kbX * fKB;
             target.knockbackVel.z = kbZ * fKB;
 
             if (launchPow > 0 && !blocked) {
-                target.knockbackVel.y = launchPow * dmgMult;
+                target.knockbackVel.y = launchPow * pctMult;
                 target.grounded = false;
                 enterState(target, CharState.LAUNCHED);
                 target.bounceCount = 0;
-            } else if ((isHeavy || isElbow || damage >= 18) && !blocked) {
-                target.knockbackVel.y = fKB * 0.3;
+            } else if ((isHeavy || isElbow || damage >= 16) && !blocked) {
+                target.knockbackVel.y = fKB * 0.35;
                 enterState(target, CharState.KNOCKBACK);
             } else if (!blocked) {
                 enterState(target, CharState.HITSTUN);
@@ -471,17 +474,17 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             target.hitstopTimer = hsTime;
 
             if ((isHeavy || isFinisher || isElbow) && sceneManager) {
-                sceneManager.shake(isHeavy ? 0.55 : (isElbow ? 0.5 : 0.3));
+                sceneManager.shake(isHeavy ? 0.6 : (isElbow ? 0.5 : 0.35));
             }
 
             if (uiManager && camera) {
                 uiManager.spawnDamageNumber(
                     target.position, damage,
-                    isHeavy || isFinisher || isElbow || damage >= 18, camera
+                    isHeavy || isFinisher || isElbow || damage >= 16, camera
                 );
             }
 
-            results.push({ attacker, target, damage, isKO: target.health <= 0 });
+            results.push({ attacker, target, damage, isKO: false });
             break;
         }
     }

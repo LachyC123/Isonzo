@@ -105,7 +105,7 @@ export class BotAI {
     }
 
     _pickTarget(char, enemies) {
-        const hpWeight = 0.3;
+        const dmgWeight = 0.3;
         const distWeight = 0.7;
 
         let best = enemies[0];
@@ -113,7 +113,7 @@ export class BotAI {
 
         for (const e of enemies) {
             const d = distance2D(char.position.x, char.position.z, e.position.x, e.position.z);
-            const score = d * distWeight + (e.health / 100) * 20 * hpWeight;
+            const score = d * distWeight - (e.damage / 100) * 10 * dmgWeight;
             if (score < bestScore) { bestScore = score; best = e; }
         }
         return best;
@@ -169,7 +169,7 @@ export class BotAI {
         if (this.stateTimer > this.stateThreshold * 0.6) {
             if (char.stamina < 30) {
                 this._setState('retreat');
-            } else if (char.health < 30 && dist < 4) {
+            } else if (char.damage > 120 && dist < 4) {
                 this._setState('retreat');
             } else if (dist > 6) {
                 this._setState(Math.random() < this.aggression ? 'rushdown' : 'approach');

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 const ITEM_TYPES = [
     { name: 'DMG+', buff: 'damageUp', color: 0xff4444, emissive: 0x661111 },
     { name: 'STA+', buff: 'staminaUp', color: 0x44aaff, emissive: 0x112266 },
-    { name: 'REGEN', buff: 'regenUp', color: 0x44ff44, emissive: 0x116611 },
+    { name: 'HEAL', buff: 'regenUp', color: 0x44ff44, emissive: 0x116611 },
     { name: 'THROW+', buff: 'throwUp', color: 0xffaa44, emissive: 0x664411 },
 ];
 
