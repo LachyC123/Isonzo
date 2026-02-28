@@ -15,6 +15,10 @@ const MOVE_TYPES = [
       shape: 'star' },
     { name: 'CYCLONE', move: CharState.SPECIAL_SPIN, color: 0xaa44ff, emissive: 0x441166, isMove: true,
       shape: 'diamond' },
+    { name: 'LARIAT', move: CharState.SPECIAL_LARIAT, color: 0xff3355, emissive: 0x551122, isMove: true,
+      shape: 'ring' },
+    { name: 'SUPLEX', move: CharState.SPECIAL_SUPLEX, color: 0x44ddff, emissive: 0x114455, isMove: true,
+      shape: 'cross' },
 ];
 
 const ALL_TYPES = [...BUFF_TYPES, ...MOVE_TYPES];
