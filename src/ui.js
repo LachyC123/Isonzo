@@ -16,6 +16,7 @@ export class UIManager {
         this.hitFlash = document.getElementById('hit-flash');
         this.hitConfirm = document.getElementById('hit-confirm');
         this.playerStats = document.getElementById('player-stats');
+        this.mobileAtkBtn = document.getElementById('btn-atk');
 
         this._comboTimer = 0;
         this._announcerTimeout = null;
@@ -24,6 +25,7 @@ export class UIManager {
         this._slowMoCallback = null;
         this._hitConfirmTimeout = null;
         this._damagePulseTimeout = null;
+        this._specialReadyShown = false;
     }
 
     showScreen(id) {
@@ -71,6 +73,15 @@ export class UIManager {
             const sp = Math.max(0, (player.stamina / player.maxStamina) * 100);
             this.playerStaminaBar.style.width = `${sp}%`;
         }
+
+        const specialReady = !!player.specialMove;
+        if (this.playerStats) this.playerStats.classList.toggle('special-ready', specialReady);
+        if (this.mobileAtkBtn) this.mobileAtkBtn.classList.toggle('special-ready', specialReady);
+
+        if (specialReady && !this._specialReadyShown) {
+            this.showAnnouncer('SPECIAL READY', 0.7);
+        }
+        this._specialReadyShown = specialReady;
 
         for (const e of enemies) {
             const el = document.getElementById(`enemy-dmg-${e.name}`);

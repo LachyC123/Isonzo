@@ -8,7 +8,7 @@
 | Sprint | Hold Shift |
 | Jump | Space |
 | Light Attack | Left Mouse Button or J |
-| Heavy Attack | Hold Right Mouse Button or K |
+| Heavy / Special | Hold Right Mouse Button or K (uses special if buff is ready) |
 | Dodge Roll | Q |
 | Grab | E |
 | Block | Hold R |
@@ -27,7 +27,7 @@ Hold RMB or K to charge. Release to strike. Longer charge = more damage and knoc
 | Control | Location | Action |
 |---------|----------|--------|
 | Virtual Joystick | Bottom-left | Move (push to edge for sprint) |
-| ATK | Bottom-center-right | Tap for light attack, hold for heavy |
+| ATK | Bottom-center-right | Tap for light attack, hold for heavy (or special when ready) |
 | JMP | Right side | Jump |
 | DGE | Left side | Dodge roll |
 | GRB | Top-center-right | Grab |

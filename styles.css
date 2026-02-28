@@ -189,6 +189,11 @@ html, body {
     box-shadow: 0 0 0 2px rgba(255,90,70,0.16), 0 8px 24px rgba(0,0,0,0.25);
 }
 
+#player-stats.special-ready {
+    border-color: rgba(255, 190, 70, 0.7);
+    box-shadow: 0 0 0 2px rgba(255, 176, 66, 0.2), 0 0 24px rgba(255, 168, 44, 0.3);
+}
+
 .player-name {
     font-size: 0.72rem;
     color: rgba(255,255,255,0.65);
@@ -253,6 +258,29 @@ html, body {
 .stamina-bar { height: 7px; }
 .stamina-bar .bar-fill {
     background: linear-gradient(90deg, #33aaff, #55ddff);
+}
+
+#special-indicator {
+    margin-top: 6px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    color: rgba(255, 212, 132, 0.75);
+    text-shadow: 0 0 14px rgba(255, 188, 67, 0.4);
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+#player-stats.special-ready #special-indicator {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    animation: special-ready-pulse 0.75s ease-in-out infinite alternate;
+}
+
+@keyframes special-ready-pulse {
+    from { text-shadow: 0 0 8px rgba(255, 188, 67, 0.35); }
+    to { text-shadow: 0 0 18px rgba(255, 198, 90, 0.7); }
 }
 
 /* Hit flash overlay */
@@ -614,6 +642,18 @@ html, body {
     transform: translateX(-50%);
     background: rgba(255,70,70,0.12);
     width: 62px; height: 62px;
+}
+
+#btn-atk.special-ready {
+    border-color: rgba(255, 198, 97, 0.95);
+    background: radial-gradient(circle at 30% 20%, rgba(255, 223, 139, 0.35), rgba(255, 108, 62, 0.2));
+    box-shadow: 0 0 0 2px rgba(255, 174, 61, 0.18), 0 0 16px rgba(255, 178, 70, 0.45);
+    animation: atk-ready-pop 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes atk-ready-pop {
+    from { transform: translateX(-50%) scale(1); }
+    to { transform: translateX(-50%) scale(1.06); }
 }
 
 #btn-jmp {
