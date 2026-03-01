@@ -53,10 +53,26 @@ export class ItemManager {
                 item.mesh.children[0].rotation.x += dt * 1.5;
             }
 
+            if (item.orbiters) {
+                for (let oi = 0; oi < item.orbiters.length; oi++) {
+                    const orb = item.orbiters[oi];
+                    const ang = item.age * (2.2 + oi * 0.35) + oi * (Math.PI * 2 / item.orbiters.length);
+                    const rad = 0.55 + Math.sin(item.age * 2.4 + oi) * 0.06;
+                    orb.position.set(Math.cos(ang) * rad, 0.22 + Math.sin(item.age * 4 + oi) * 0.08, Math.sin(ang) * rad);
+                }
+            }
+
             if (item.ring) {
                 item.ring.rotation.z += dt * 1.5;
                 const pulse = 0.2 + Math.sin(item.age * 4) * 0.08;
                 item.ring.material.opacity = pulse;
+            }
+
+            if (item.aura) {
+                const auraPulse = 0.28 + Math.sin(item.age * 3.5) * 0.1;
+                item.aura.material.opacity = auraPulse;
+                const auraScale = 1 + Math.sin(item.age * 4.2) * 0.06;
+                item.aura.scale.set(auraScale, auraScale, auraScale);
             }
 
             for (const char of characters) {
@@ -74,6 +90,10 @@ export class ItemManager {
             if (item.age > 20) {
                 const fade = Math.max(0, (24 - item.age) / 4);
                 item.mesh.children[0].material.opacity = fade * 0.9;
+                if (item.aura) item.aura.material.opacity *= fade;
+                if (item.orbiters) {
+                    for (const orb of item.orbiters) orb.material.opacity = 0.45 * fade;
+                }
                 if (item.age > 24) {
                     this.scene.remove(item.mesh);
                     this.items.splice(i, 1);
@@ -118,6 +138,27 @@ export class ItemManager {
         ring.rotation.x = Math.PI / 2;
         group.add(ring);
 
+        const auraGeo = new THREE.CircleGeometry(type.isMove ? 1.1 : 0.95, 28);
+        const auraMat = new THREE.MeshBasicMaterial({
+            color: type.color, transparent: true, opacity: 0.24, side: THREE.DoubleSide,
+        });
+        const aura = new THREE.Mesh(auraGeo, auraMat);
+        aura.rotation.x = -Math.PI / 2;
+        aura.position.y = -0.55;
+        group.add(aura);
+
+        const orbiters = [];
+        const orbCount = type.isMove ? 4 : 3;
+        for (let i = 0; i < orbCount; i++) {
+            const orb = new THREE.Mesh(
+                new THREE.SphereGeometry(type.isMove ? 0.05 : 0.04, 6, 6),
+                new THREE.MeshBasicMaterial({ color: type.color, transparent: true, opacity: 0.45 }),
+            );
+            orb.position.y = 0.22;
+            orbiters.push(orb);
+            group.add(orb);
+        }
+
         if (type.isMove) {
             const outerGeo = new THREE.TorusGeometry(0.7, 0.03, 6, 18);
             const outerMat = new THREE.MeshBasicMaterial({
@@ -140,7 +181,7 @@ export class ItemManager {
         group.position.set(x, baseY, z);
         this.scene.add(group);
 
-        this.items.push({ mesh: group, type, age: 0, x, z, baseY, ring });
+        this.items.push({ mesh: group, type, age: 0, x, z, baseY, ring, aura, orbiters });
     }
 
     _apply(char, type) {
