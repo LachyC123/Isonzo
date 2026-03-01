@@ -104,6 +104,12 @@ export function processCharacterState(char, dt) {
 function handleFreeState(char, dt) {
     const intent = char.intent;
 
+    if (intent.heavyCharge && char.specialMove) {
+        enterState(char, char.specialMove);
+        char.specialMove = null;
+        return;
+    }
+
     if (!char.grounded) {
         const moveLen = Math.sqrt(intent.moveX * intent.moveX + intent.moveZ * intent.moveZ);
         if (moveLen > 0.1) {
@@ -149,11 +155,6 @@ function handleFreeState(char, dt) {
         return;
     }
     if (intent.heavyCharge) {
-        if (char.specialMove) {
-            enterState(char, char.specialMove);
-            char.specialMove = null;
-            return;
-        }
         enterState(char, CharState.HEAVY_CHARGE);
         char.heavyChargeTime = 0;
         return;
