@@ -19,6 +19,12 @@ const MOVE_TYPES = [
       shape: 'ring' },
     { name: 'SUPLEX', move: CharState.SPECIAL_SUPLEX, color: 0x44ddff, emissive: 0x114455, isMove: true,
       shape: 'cross' },
+    { name: 'FLURRY', move: CharState.SPECIAL_FLURRY, color: 0xff66cc, emissive: 0x662244, isMove: true,
+      shape: 'burst' },
+    { name: 'CRATER', move: CharState.SPECIAL_CRATER, color: 0xff7744, emissive: 0x662211, isMove: true,
+      shape: 'hammer' },
+    { name: 'CHAIN GRAB', move: CharState.SPECIAL_CHAIN_GRAB, color: 0x55ffcc, emissive: 0x115544, isMove: true,
+      shape: 'clasp' },
 ];
 
 const ALL_TYPES = [...BUFF_TYPES, ...MOVE_TYPES];
