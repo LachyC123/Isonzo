@@ -86,7 +86,7 @@ export class BotAI {
         this.stateTimer += dt;
         this.decisionTimer -= dt;
 
-        const enemies = allChars.filter(c => c !== char && c.alive);
+        const enemies = allChars.filter(c => c.alive);
         if (enemies.length === 0) return;
 
         if (!this.target || !this.target.alive || this.decisionTimer <= 0) {

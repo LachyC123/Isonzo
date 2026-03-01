@@ -167,6 +167,98 @@ html, body {
     display: inline-block;
 }
 
+/* ── Mode Select ── */
+#mode-select {
+    background: linear-gradient(135deg, rgba(12,12,28,0.97), rgba(28,10,38,0.97));
+    pointer-events: all;
+}
+
+.mode-cards {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+}
+
+.mode-card {
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 2rem 1.8rem;
+    min-width: 200px;
+    max-width: 240px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, background 0.15s;
+    color: #fff;
+    text-align: center;
+    pointer-events: all;
+}
+
+.mode-card:hover, .mode-card:active {
+    transform: scale(1.05);
+    border-color: #ffb432;
+    background: rgba(255,180,50,0.08);
+}
+
+.mode-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+    filter: grayscale(0.3);
+}
+
+.mode-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #ffb432;
+    margin-bottom: 0.5rem;
+}
+
+.mode-desc {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.4;
+}
+
+/* ── Nameplates ── */
+#nameplates {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.nameplate {
+    position: absolute;
+    text-align: center;
+    pointer-events: none;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.nameplate-name {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.4);
+}
+
+.nameplate-name.team-blue { color: #66bbff; border-bottom: 2px solid #3388ff; }
+.nameplate-name.team-red { color: #ff8877; border-bottom: 2px solid #ff3344; }
+.nameplate-name.ffa { color: rgba(255,255,255,0.8); }
+
+.nameplate-pct {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    margin-top: 1px;
+}
+
 /* ── HUD ── */
 #hud { pointer-events: none; }
 #hud.active { display: block; }

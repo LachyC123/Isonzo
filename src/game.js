@@ -15,11 +15,17 @@ import * as Audio from './audio.js';
 
 const GameState = {
     MENU: 'menu',
+    MODE_SELECT: 'mode_select',
     COUNTDOWN: 'countdown',
     PLAYING: 'playing',
     SLOWMO: 'slowmo',
     ROUND_END: 'round_end',
     RESULTS: 'results',
+};
+
+const TEAM_COLORS = {
+    blue: { body: 0x2266dd, accent: 0x55aaff, name: 'Blue' },
+    red:  { body: 0xcc2233, accent: 0xff7766, name: 'Red' },
 };
 
 export class Game {
@@ -31,6 +37,7 @@ export class Game {
 
         this.state = GameState.MENU;
         this.stateTimer = 0;
+        this.gameMode = 'ffa';
 
         this.characters = [];
         this.player = null;
@@ -38,9 +45,11 @@ export class Game {
         this.botAIs = [];
 
         this.currentRound = 1;
-        this.maxRounds = 3;
+        this.maxRounds = 5;
         this.playerRoundWins = 0;
         this.bestBotRoundWins = 0;
+        this.blueTeamWins = 0;
+        this.redTeamWins = 0;
 
         this.lockOnTarget = null;
         this.comboCount = 0;
@@ -53,24 +62,73 @@ export class Game {
     init(canvas) {
         this.scene.init(canvas);
         this.input.init();
-
         this.items = new ItemManager(this.scene.scene);
 
-        this.player = createCharacter('YOU', CHAR_COLORS[0], true);
-        this.characters.push(this.player);
-        this.scene.scene.add(this.player.mesh);
-
-        for (let i = 1; i <= 3; i++) {
-            const bot = createCharacter(CHAR_COLORS[i].name, CHAR_COLORS[i], false);
-            this.characters.push(bot);
-            this.scene.scene.add(bot.mesh);
-            this.bots.push(bot);
-            this.botAIs.push(new BotAI(0.25 + i * 0.15));
-        }
-
+        this._createCharacters();
         this._bindButtons();
         this._hideAll();
         this.ui.showScreen('main-menu');
+    }
+
+    _createCharacters() {
+        this.characters = [];
+        this.bots = [];
+        this.botAIs = [];
+
+        for (let i = 0; i < 4; i++) {
+            const isP = i === 0;
+            const c = createCharacter(
+                isP ? 'YOU' : CHAR_COLORS[i].name,
+                CHAR_COLORS[i], isP
+            );
+            c.team = null;
+            c.charIndex = i;
+            this.characters.push(c);
+            this.scene.scene.add(c.mesh);
+            if (isP) {
+                this.player = c;
+            } else {
+                this.bots.push(c);
+                this.botAIs.push(new BotAI(0.3 + i * 0.12));
+            }
+        }
+    }
+
+    _applyTeamColors() {
+        for (const c of this.characters) {
+            if (!c.team) continue;
+            const tc = c.team === 'blue' ? TEAM_COLORS.blue : TEAM_COLORS.red;
+            const p = c.bodyParts;
+            p.torso.material.color.setHex(tc.body);
+            p.chest.material.color.setHex(tc.body);
+            p.hips.material.color.setHex(tc.body);
+            p.lShoulder.material.color.setHex(tc.body);
+            p.rShoulder.material.color.setHex(tc.body);
+            p.mask.material.color.setHex(tc.accent);
+            p.belt.material.color.setHex(tc.accent);
+            p.lBoot.material.color.setHex(tc.accent);
+            p.rBoot.material.color.setHex(tc.accent);
+            c.colorSet = { body: tc.body, accent: tc.accent };
+        }
+    }
+
+    _resetCharColors() {
+        for (let i = 0; i < this.characters.length; i++) {
+            const c = this.characters[i];
+            const cc = CHAR_COLORS[i];
+            const p = c.bodyParts;
+            p.torso.material.color.setHex(cc.body);
+            p.chest.material.color.setHex(cc.body);
+            p.hips.material.color.setHex(0x1a1a2a);
+            p.lShoulder.material.color.setHex(cc.body);
+            p.rShoulder.material.color.setHex(cc.body);
+            p.mask.material.color.setHex(cc.accent);
+            p.belt.material.color.setHex(cc.accent);
+            p.lBoot.material.color.setHex(cc.accent);
+            p.rBoot.material.color.setHex(cc.accent);
+            c.colorSet = cc;
+            c.team = null;
+        }
     }
 
     _bindButtons() {
@@ -78,14 +136,44 @@ export class Game {
             const el = document.getElementById(id);
             if (el) el.addEventListener('click', () => { Audio.resumeAudio(); Audio.playUIClick(); fn(); });
         };
-        click('btn-play', () => this.startMatch());
+        click('btn-play', () => {
+            this.state = GameState.MODE_SELECT;
+            this.ui.showScreen('mode-select');
+        });
+        click('btn-ffa', () => {
+            this.gameMode = 'ffa';
+            this._resetCharColors();
+            this.maxRounds = 3;
+            this.startMatch();
+        });
+        click('btn-teams', () => {
+            this.gameMode = 'teams';
+            this.characters[0].team = 'blue';
+            this.characters[0].name = 'YOU';
+            this.characters[1].team = 'blue';
+            this.characters[1].name = 'ALLY';
+            this.characters[2].team = 'red';
+            this.characters[2].name = 'FOE 1';
+            this.characters[3].team = 'red';
+            this.characters[3].name = 'FOE 2';
+            this._applyTeamColors();
+            this.maxRounds = 5;
+            this.startMatch();
+        });
+        click('btn-mode-back', () => this.ui.showScreen('main-menu'));
         click('btn-controls', () => this.ui.showScreen('controls-screen'));
         click('btn-back', () => this.ui.showScreen('main-menu'));
-        click('btn-play-again', () => this.startMatch());
+        click('btn-play-again', () => {
+            if (this.gameMode === 'teams') {
+                this._applyTeamColors();
+            }
+            this.startMatch();
+        });
         click('btn-menu', () => {
             this.state = GameState.MENU;
             this.ui.showScreen('main-menu');
             this.ui.showMobileControls(false);
+            this._resetCharColors();
             this._hideAll();
         });
     }
@@ -94,6 +182,8 @@ export class Game {
         this.currentRound = 1;
         this.playerRoundWins = 0;
         this.bestBotRoundWins = 0;
+        this.blueTeamWins = 0;
+        this.redTeamWins = 0;
 
         for (const c of this.characters) {
             c.roundWins = 0;
@@ -107,10 +197,9 @@ export class Game {
     }
 
     _startRound() {
-        const spots = [
-            { x: 0, z: -8 }, { x: 8, z: 0 },
-            { x: 0, z: 8 },  { x: -8, z: 0 },
-        ];
+        const spots = this.gameMode === 'teams'
+            ? [{ x: -4, z: -6 }, { x: 4, z: -6 }, { x: -4, z: 6 }, { x: 4, z: 6 }]
+            : [{ x: 0, z: -8 }, { x: 8, z: 0 }, { x: 0, z: 8 }, { x: -8, z: 0 }];
 
         for (let i = 0; i < this.characters.length; i++) {
             const c = this.characters[i];
@@ -133,8 +222,8 @@ export class Game {
 
         this.ui.showScreen('hud');
         this.ui.showMobileControls(this.input.isMobile);
-        this.ui.setupEnemyBars(this.characters);
-        this.ui.updateRound(this.currentRound, this.playerRoundWins);
+        this.ui.setupEnemyBars(this.characters, this.gameMode);
+        this.ui.updateRound(this.currentRound, this.gameMode === 'teams' ? this.blueTeamWins : this.playerRoundWins);
         this.ui.showAnnouncer(`ROUND ${this.currentRound}`, 1.5);
 
         this.scene.camAngle = Math.atan2(this.player.position.x, this.player.position.z) + Math.PI;
@@ -153,7 +242,9 @@ export class Game {
         dt = Math.min(dt, 0.05);
 
         switch (this.state) {
-            case GameState.MENU: this._updateMenu(dt); break;
+            case GameState.MENU:
+            case GameState.MODE_SELECT:
+                this._updateMenu(dt); break;
             case GameState.COUNTDOWN: this._updateCountdown(dt); break;
             case GameState.PLAYING: this._updatePlaying(dt); break;
             case GameState.SLOWMO: this._updateSlowMo(dt); break;
@@ -199,7 +290,8 @@ export class Game {
 
         for (let i = 0; i < this.bots.length; i++) {
             if (this.bots[i].alive) {
-                this.botAIs[i].update(dt, this.bots[i], this.characters);
+                const enemies = this._getEnemiesFor(this.bots[i]);
+                this.botAIs[i].update(dt, this.bots[i], enemies);
             }
         }
 
@@ -213,7 +305,6 @@ export class Game {
                 this.comboCount++;
                 this.comboTimer = 2;
                 this.ui.updateCombo(this.comboCount);
-                if (hit.damage > 0) this.ui.showHitConfirm(hit.damage >= 16);
             }
 
             if (hit.damage > 0) {
@@ -223,20 +314,15 @@ export class Game {
                 const count = isHuge ? 22 : (isBig ? 12 : 6);
                 this.scene.spawnHitParticles(hit.target.position, color, count);
                 this.scene.spawnSpeedLines(hit.target.position, 0, color);
-                if (isBig) {
-                    this.scene.spawnImpactRing(hit.target.position);
-                }
+                if (isBig) this.scene.spawnImpactRing(hit.target.position);
                 if (isHuge) {
                     this.scene.spawnDustCloud(hit.target.position);
                     this.scene.spawnImpactRing(hit.target.position);
                     this.scene.spawnGroundCrack(hit.target.position);
                 }
-
                 if (hit.target === this.player) {
                     this.ui.flashScreen(isHuge ? 'white' : 'red');
-                    this.ui.pulsePlayerDamage();
                 }
-
                 if (hit.blocked) {
                     this.scene.spawnHitParticles(hit.target.position, 0x4488ff, 8);
                     this.scene.shake(0.15);
@@ -251,11 +337,9 @@ export class Game {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) this.comboCount = 0;
 
-        const alive = this.characters.filter(c => c.alive);
+        const aliveNow = this.characters.filter(c => c.alive);
         for (const c of this.characters) {
-            if (c.alive && checkRingOut(c)) {
-                this._handleRingOut(c, alive.length);
-            }
+            if (c.alive && checkRingOut(c)) this._handleRingOut(c, aliveNow.length);
         }
 
         for (const c of this.characters) {
@@ -264,9 +348,7 @@ export class Game {
                 this.scene.spawnDustCloud(c.position);
                 this.scene.spawnShockwave(c.position, 0xddaa66);
                 this.scene.shake(0.25);
-                if (c.bounceCount <= 1) {
-                    this.scene.spawnGroundCrack(c.position);
-                }
+                if (c.bounceCount <= 1) this.scene.spawnGroundCrack(c.position);
             }
             if (c.state === CharState.KNOCKDOWN && c.stateTimer < 0.05) {
                 this.scene.spawnDustCloud(c.position);
@@ -287,9 +369,7 @@ export class Game {
             this.ui.showAnnouncer(msg, isMove ? 1.5 : 1);
             const pColor = isMove ? pickup.type.color : 0x44ff44;
             this.scene.spawnHitParticles(pickup.character.position, pColor, isMove ? 14 : 8);
-            if (isMove) {
-                this.scene.spawnImpactRing(pickup.character.position);
-            }
+            if (isMove) this.scene.spawnImpactRing(pickup.character.position);
         }
 
         this._updateLockOn();
@@ -314,8 +394,16 @@ export class Game {
         for (const c of this.characters) updateCharacterAnimation(c, dt);
         this.ui.updateHUD(this.player, this.bots, this.scene.camera, dt);
         this.ui.updateLockOn(this.lockOnTarget, this.scene.camera);
+        this.ui.updateNameplates(this.characters, this.scene.camera, this.gameMode);
 
         this._checkRoundEnd();
+    }
+
+    _getEnemiesFor(char) {
+        if (this.gameMode === 'teams') {
+            return this.characters.filter(c => c !== char && c.alive && c.team !== char.team);
+        }
+        return this.characters.filter(c => c !== char && c.alive);
     }
 
     _updateSlowMo(dt) {
@@ -370,10 +458,11 @@ export class Game {
         let nearestDist = 18;
 
         if (this.player.alive) {
-            for (const bot of this.bots) {
-                if (!bot.alive) continue;
-                const d = this.player.position.distanceTo(bot.position);
-                if (d < nearestDist) { nearestDist = d; nearest = bot; }
+            for (const c of this.characters) {
+                if (c === this.player || !c.alive) continue;
+                if (this.gameMode === 'teams' && c.team === this.player.team) continue;
+                const d = this.player.position.distanceTo(c.position);
+                if (d < nearestDist) { nearestDist = d; nearest = c; }
             }
         }
 
@@ -410,17 +499,12 @@ export class Game {
             char.grabbedBy = null;
         }
 
-        const remaining = this.characters.filter(c => c.alive);
-        const lastNearEdge = remaining.length > 0 && remaining.some(c => {
-            const d = Math.sqrt(c.position.x ** 2 + c.position.z ** 2);
-            return d > 20 || c.state === CharState.LAUNCHED || c.state === CharState.KNOCKBACK;
-        });
-
         Audio.playRingOut();
         this.scene.shake(0.5);
         this.scene.spawnHitParticles(char.position, 0xff6644, 16);
 
-        if (aliveBeforeThis <= 2) {
+        const isFinal = this._isRoundOver();
+        if (isFinal) {
             this.ui.showAnnouncer(`${char.name} ELIMINATED!`, 2);
             this.state = GameState.SLOWMO;
             this.stateTimer = 0;
@@ -430,24 +514,46 @@ export class Game {
         }
     }
 
-    _checkRoundEnd() {
-        const alive = this.characters.filter(c => c.alive);
-        if (alive.length > 1) return;
-
-        const winner = alive[0] || null;
-        if (winner) {
-            winner.roundWins++;
-            if (winner.isPlayer) this.playerRoundWins++;
+    _isRoundOver() {
+        if (this.gameMode === 'teams') {
+            const blueAlive = this.characters.filter(c => c.alive && c.team === 'blue').length;
+            const redAlive = this.characters.filter(c => c.alive && c.team === 'red').length;
+            return blueAlive === 0 || redAlive === 0;
         }
+        return this.characters.filter(c => c.alive).length <= 1;
+    }
 
-        this.bestBotRoundWins = Math.max(...this.bots.map(b => b.roundWins), 0);
+    _checkRoundEnd() {
+        if (!this._isRoundOver()) return;
+
+        if (this.gameMode === 'teams') {
+            const blueAlive = this.characters.filter(c => c.alive && c.team === 'blue').length;
+            const redAlive = this.characters.filter(c => c.alive && c.team === 'red').length;
+            if (blueAlive > 0) {
+                this.blueTeamWins++;
+                this.ui.showAnnouncer('BLUE TEAM WINS!', 2);
+                if (this.player.alive) Audio.playVictory();
+            } else if (redAlive > 0) {
+                this.redTeamWins++;
+                this.ui.showAnnouncer('RED TEAM WINS!', 2);
+            } else {
+                this.ui.showAnnouncer('DRAW!', 2);
+            }
+        } else {
+            const alive = this.characters.filter(c => c.alive);
+            const winner = alive[0] || null;
+            if (winner) {
+                winner.roundWins++;
+                if (winner.isPlayer) this.playerRoundWins++;
+            }
+            this.bestBotRoundWins = Math.max(...this.bots.map(b => b.roundWins), 0);
+            const name = winner ? winner.name : 'NOBODY';
+            this.ui.showAnnouncer(`${name} WINS!`, 2);
+            if (winner && winner.isPlayer) Audio.playVictory();
+        }
 
         this.state = GameState.ROUND_END;
         this.stateTimer = 0;
-
-        const name = winner ? winner.name : 'NOBODY';
-        this.ui.showAnnouncer(`${name} WINS!`, 2);
-        if (winner && winner.isPlayer) Audio.playVictory();
     }
 
     _updateRoundEnd(dt) {
@@ -459,7 +565,11 @@ export class Game {
         for (const c of this.characters) updateCharacterAnimation(c, dt);
 
         if (this.stateTimer >= 3) {
-            if (this.playerRoundWins >= 2 || this.bestBotRoundWins >= 2 || this.currentRound >= this.maxRounds) {
+            const matchOver = this.gameMode === 'teams'
+                ? (this.blueTeamWins >= 3 || this.redTeamWins >= 3 || this.currentRound >= this.maxRounds)
+                : (this.playerRoundWins >= 2 || this.bestBotRoundWins >= 2 || this.currentRound >= this.maxRounds);
+
+            if (matchOver) {
                 this._endMatch();
             } else {
                 this.currentRound++;
@@ -469,13 +579,19 @@ export class Game {
     }
 
     _endMatch() {
-        const isVictory = this.playerRoundWins > this.bestBotRoundWins;
+        let isVictory;
+        if (this.gameMode === 'teams') {
+            isVictory = this.blueTeamWins > this.redTeamWins;
+        } else {
+            isVictory = this.playerRoundWins > this.bestBotRoundWins;
+        }
         this.state = GameState.RESULTS;
 
         if (isVictory) Audio.playVictory(); else Audio.playDefeat();
 
+        const rw = this.gameMode === 'teams' ? this.blueTeamWins : this.playerRoundWins;
         this.ui.showResults(isVictory, {
-            roundWins: this.playerRoundWins,
+            roundWins: rw,
             damageDealt: this.player.damageDealt,
             kills: this.player.kills,
         });

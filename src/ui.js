@@ -14,18 +14,11 @@ export class UIManager {
         this.mobileControls = document.getElementById('mobile-controls');
         this.lockOnEl = document.getElementById('lock-on-marker');
         this.hitFlash = document.getElementById('hit-flash');
-        this.hitConfirm = document.getElementById('hit-confirm');
-        this.playerStats = document.getElementById('player-stats');
-        this.mobileAtkBtn = document.getElementById('btn-atk');
+        this.nameplatesEl = document.getElementById('nameplates');
 
         this._comboTimer = 0;
         this._announcerTimeout = null;
         this._flashTimeout = null;
-        this._slowMoTimer = 0;
-        this._slowMoCallback = null;
-        this._hitConfirmTimeout = null;
-        this._damagePulseTimeout = null;
-        this._specialReadyShown = false;
     }
 
     showScreen(id) {
@@ -40,7 +33,7 @@ export class UIManager {
         }
     }
 
-    setupEnemyBars(characters) {
+    setupEnemyBars(characters, mode) {
         this.enemyContainer.innerHTML = '';
         for (const char of characters) {
             if (char.isPlayer) continue;
@@ -48,8 +41,9 @@ export class UIManager {
             div.className = 'enemy-stat';
             div.id = `enemy-${char.name}`;
             const hexColor = '#' + new THREE.Color(char.colorSet.body).getHexString();
+            const teamLabel = char.team ? ` [${char.team.toUpperCase()}]` : '';
             div.innerHTML = `
-                <div class="player-name" style="color:${hexColor}">${char.name}</div>
+                <div class="player-name" style="color:${hexColor}">${char.name}${teamLabel}</div>
                 <div class="dmg-pct" id="enemy-dmg-${char.name}">0%</div>
             `;
             this.enemyContainer.appendChild(div);
@@ -74,15 +68,6 @@ export class UIManager {
             this.playerStaminaBar.style.width = `${sp}%`;
         }
 
-        const specialReady = !!player.specialMove;
-        if (this.playerStats) this.playerStats.classList.toggle('special-ready', specialReady);
-        if (this.mobileAtkBtn) this.mobileAtkBtn.classList.toggle('special-ready', specialReady);
-
-        if (specialReady && !this._specialReadyShown) {
-            this.showAnnouncer('SPECIAL READY', 0.7);
-        }
-        this._specialReadyShown = specialReady;
-
         for (const e of enemies) {
             const el = document.getElementById(`enemy-dmg-${e.name}`);
             if (el) {
@@ -97,11 +82,67 @@ export class UIManager {
         const alive = [player, ...enemies].filter(c => c.alive).length;
         if (this.aliveCount) this.aliveCount.textContent = alive;
 
+        const specEl = document.getElementById('special-indicator');
+        if (specEl) {
+            specEl.style.display = player.specialMove ? 'block' : 'none';
+        }
+
         if (this._comboTimer > 0) {
             this._comboTimer -= dt;
             this.comboMeter.classList.add('visible');
         } else {
             this.comboMeter.classList.remove('visible');
+        }
+    }
+
+    updateNameplates(characters, camera, mode) {
+        if (!this.nameplatesEl) return;
+
+        while (this.nameplatesEl.children.length < characters.length) {
+            const np = document.createElement('div');
+            np.className = 'nameplate';
+            np.innerHTML = '<div class="nameplate-name"></div><div class="nameplate-pct"></div>';
+            this.nameplatesEl.appendChild(np);
+        }
+
+        for (let i = 0; i < characters.length; i++) {
+            const c = characters[i];
+            const np = this.nameplatesEl.children[i];
+            if (!c.alive) {
+                np.style.display = 'none';
+                continue;
+            }
+
+            const v = new THREE.Vector3(c.position.x, c.position.y + 2.5, c.position.z);
+            v.project(camera);
+            if (v.z > 1 || v.z < 0) {
+                np.style.display = 'none';
+                continue;
+            }
+
+            const sx = (v.x * 0.5 + 0.5) * window.innerWidth;
+            const sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+
+            np.style.display = 'block';
+            np.style.left = `${sx}px`;
+            np.style.top = `${sy}px`;
+
+            const nameEl = np.children[0];
+            const pctEl = np.children[1];
+
+            nameEl.textContent = c.name;
+            if (mode === 'teams') {
+                nameEl.className = `nameplate-name team-${c.team}`;
+            } else {
+                nameEl.className = 'nameplate-name ffa';
+                nameEl.style.color = '#' + new THREE.Color(c.colorSet.body).getHexString();
+            }
+
+            const pct = Math.floor(c.damage);
+            pctEl.textContent = `${pct}%`;
+            if (pct >= 150) pctEl.style.color = '#ff2222';
+            else if (pct >= 80) pctEl.style.color = '#ff8833';
+            else pctEl.style.color = '#ffffff';
         }
     }
 
@@ -111,27 +152,7 @@ export class UIManager {
         if (this._flashTimeout) clearTimeout(this._flashTimeout);
         this._flashTimeout = setTimeout(() => {
             this.hitFlash.className = '';
-        }, type === 'white' ? 120 : 90);
-    }
-
-    showHitConfirm(isHeavy = false) {
-        if (!this.hitConfirm) return;
-        this.hitConfirm.className = isHeavy ? 'active heavy' : 'active';
-        if (this._hitConfirmTimeout) clearTimeout(this._hitConfirmTimeout);
-        this._hitConfirmTimeout = setTimeout(() => {
-            this.hitConfirm.className = '';
-        }, isHeavy ? 180 : 130);
-    }
-
-    pulsePlayerDamage() {
-        if (!this.playerDmg || !this.playerStats) return;
-        this.playerDmg.classList.add('hit-pulse');
-        this.playerStats.classList.add('hit-pulse');
-        if (this._damagePulseTimeout) clearTimeout(this._damagePulseTimeout);
-        this._damagePulseTimeout = setTimeout(() => {
-            this.playerDmg.classList.remove('hit-pulse');
-            this.playerStats.classList.remove('hit-pulse');
-        }, 180);
+        }, 100);
     }
 
     showAnnouncer(text, duration = 2) {
@@ -148,9 +169,6 @@ export class UIManager {
         if (count > 1) {
             this.comboCount.textContent = count;
             this._comboTimer = 2;
-            this.comboMeter.classList.remove('pop');
-            this.comboCount.offsetWidth;
-            this.comboMeter.classList.add('pop');
         }
     }
 
@@ -165,8 +183,6 @@ export class UIManager {
         const el = document.createElement('div');
         el.className = 'damage-number' + (isCrit ? ' crit' : '');
         el.textContent = Math.round(amount);
-        el.style.setProperty('--drift-x', `${(Math.random() * 36 - 18).toFixed(1)}px`);
-        el.style.setProperty('--tilt', `${(Math.random() * 16 - 8).toFixed(1)}deg`);
         el.style.left = `${sx}px`;
         el.style.top = `${sy}px`;
         this.damageContainer.appendChild(el);

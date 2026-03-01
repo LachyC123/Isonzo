@@ -543,6 +543,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             if (attacker.stateTimer >= data.hitStart && attacker.stateTimer <= data.hitEnd) {
                 for (const target of characters) {
                     if (target === attacker || !target.alive || target.iFrames) continue;
+                    if (attacker.team && target.team === attacker.team) continue;
                     const dx = target.position.x - attacker.position.x;
                     const dz = target.position.z - attacker.position.z;
                     const dist = Math.sqrt(dx * dx + dz * dz);
@@ -586,6 +587,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
 
         for (const target of characters) {
             if (target === attacker || !target.alive || target.iFrames) continue;
+            if (attacker.team && target.team === attacker.team) continue;
 
             const dx = target.position.x - attacker.position.x;
             const dz = target.position.z - attacker.position.z;
