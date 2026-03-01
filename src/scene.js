@@ -95,10 +95,10 @@ export class SceneManager {
             color: 0x661818, emissive: 0x441010,
             side: THREE.DoubleSide, transparent: true, opacity: 0.5,
         });
-        const danger = new THREE.Mesh(dangerGeo, dangerMat);
-        danger.rotation.x = -Math.PI / 2;
-        danger.position.y = 0.01;
-        this.scene.add(danger);
+        this.dangerZone = new THREE.Mesh(dangerGeo, dangerMat);
+        this.dangerZone.rotation.x = -Math.PI / 2;
+        this.dangerZone.position.y = 0.01;
+        this.scene.add(this.dangerZone);
 
         for (let ring = 5; ring <= 20; ring += 5) {
             const rGeo = new THREE.RingGeometry(ring - 0.05, ring + 0.05, 64);
@@ -423,7 +423,11 @@ export class SceneManager {
     updateParticles(dt) {
         this.time += dt;
         if (this.edgeRing) {
-            this.edgeRing.material.emissiveIntensity = 0.4 + Math.sin(this.time * 2) * 0.2;
+            this.edgeRing.material.emissiveIntensity = 0.4 + Math.sin(this.time * 2) * 0.25;
+        }
+        if (this.dangerZone) {
+            this.dangerZone.material.opacity = 0.4 + Math.sin(this.time * 1.5) * 0.12;
+            this.dangerZone.material.emissiveIntensity = 0.3 + Math.sin(this.time * 3) * 0.15;
         }
         for (let i = 0; i < this.spotlights.length; i++) {
             const sl = this.spotlights[i];

@@ -11,7 +11,7 @@ export const CharState = {
     LIGHT3: 'light3',
     HEAVY_CHARGE: 'heavy_charge',
     HEAVY_RELEASE: 'heavy_release',
-    ELBOW_DROP: 'elbow_drop',
+    DROPKICK: 'dropkick',
     SPECIAL_UPPERCUT: 'special_uppercut',
     SPECIAL_DROPKICK: 'special_dropkick',
     SPECIAL_SPIN: 'special_spin',
@@ -31,6 +31,7 @@ export const CharState = {
     KNOCKBACK: 'knockback',
     LAUNCHED: 'launched',
     GROUND_BOUNCE: 'ground_bounce',
+    KNOCKDOWN: 'knockdown',
     GETUP: 'getup',
     KO: 'ko',
     RINGOUT: 'ringout',
@@ -39,7 +40,7 @@ export const CharState = {
 export const ACTION_STATES = new Set([
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
-    CharState.ELBOW_DROP,
+    CharState.DROPKICK,
     CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
     CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
     CharState.SPECIAL_FLURRY, CharState.SPECIAL_CRATER, CharState.SPECIAL_CHAIN_GRAB,
@@ -47,7 +48,7 @@ export const ACTION_STATES = new Set([
     CharState.GRAB_SLAM, CharState.GRABBED, CharState.BLOCK,
     CharState.BLOCK_STAGGER,
     CharState.HITSTUN, CharState.KNOCKBACK, CharState.LAUNCHED,
-    CharState.GROUND_BOUNCE, CharState.GETUP,
+    CharState.GROUND_BOUNCE, CharState.KNOCKDOWN, CharState.GETUP,
     CharState.KO, CharState.RINGOUT,
 ]);
 
@@ -551,30 +552,34 @@ export function updateCharacterAnimation(char, dt) {
             p.rForearm.mesh.material.emissiveIntensity *= 0.9;
             break;
         }
-        case CharState.ELBOW_DROP: {
+        case CharState.DROPKICK: {
             const T = char.stateTimer;
-            const leap = Math.min(T / 0.15, 1);
-            const drop = T < 0.15 ? 0 : Math.min((T - 0.15) / 0.15, 1);
+            const wind = Math.min(T / 0.08, 1);
+            const kick = T < 0.08 ? 0 : easeOut(Math.min((T - 0.08) / 0.12, 1));
+            const hold = T < 0.2 ? 0 : Math.min((T - 0.2) / 0.1, 1);
             const land = T < 0.3 ? 0 : Math.min((T - 0.3) / 0.2, 1);
+            const active = kick * (1 - land * 0.6);
 
-            if (T < 0.15) {
-                p.torso.rotation.x = -0.2 * leap;
-                p.rUpperArm.pivot.rotation.x = -2.0 * leap;
-                p.rUpperArm.pivot.rotation.z = -0.3;
-                p.rForearm.pivot.rotation.x = -1.5 * leap;
-            } else if (T < 0.3) {
-                p.torso.rotation.x = 0.6 * easeIn(drop);
-                p.rUpperArm.pivot.rotation.x = -2.0 + 3.5 * easeIn(drop);
-                p.rForearm.pivot.rotation.x = -1.5 + 0.8 * drop;
-                p.lThigh.pivot.rotation.x = 0.4 * drop;
-                p.rThigh.pivot.rotation.x = 0.2 * drop;
-            } else {
-                p.torso.rotation.x = 0.3 * (1 - land);
-                p.rUpperArm.pivot.rotation.x = 0.5 * (1 - land);
-                p.rForearm.pivot.rotation.x = -0.5;
+            p.torso.rotation.x = -0.3 * wind + 0.7 * active;
+            p.chest.rotation.x = 0.2 * active;
+            p.head.rotation.x = -0.15 * active;
+
+            p.lThigh.pivot.rotation.x = -1.5 * active;
+            p.rThigh.pivot.rotation.x = -1.4 * active;
+            p.lShin.pivot.rotation.x = -0.15 * active;
+            p.rShin.pivot.rotation.x = -0.2 * active;
+
+            p.lUpperArm.pivot.rotation.set(0.7 * active, 0, 0.9 * active);
+            p.rUpperArm.pivot.rotation.set(0.7 * active, 0, -0.9 * active);
+            p.lForearm.pivot.rotation.x = -0.3;
+            p.rForearm.pivot.rotation.x = -0.3;
+
+            if (active > 0.3) {
+                p.lBoot.material.emissive.setHex(0xff4400);
+                p.lBoot.material.emissiveIntensity = active * 0.8;
+                p.rBoot.material.emissive.setHex(0xff4400);
+                p.rBoot.material.emissiveIntensity = active * 0.8;
             }
-            p.lUpperArm.pivot.rotation.set(-0.4, 0, 0.4);
-            p.lForearm.pivot.rotation.x = -0.6;
             break;
         }
         case CharState.SPECIAL_UPPERCUT: {
@@ -980,13 +985,49 @@ export function updateCharacterAnimation(char, dt) {
             p.rShin.pivot.rotation.x = -0.6 * spread;
             break;
         }
+        case CharState.KNOCKDOWN: {
+            const T = char.stateTimer;
+            const fall = easeOut(Math.min(T / 0.2, 1));
+            const lie = T < 0.2 ? 0 : Math.min((T - 0.2) / 0.6, 1);
+            const twitch = Math.sin(T * 6) * 0.03 * (1 - lie);
+
+            char.mesh.rotation.x = fall * (Math.PI / 2) * 0.95;
+            char.mesh.position.y = char.position.y - fall * 0.7;
+
+            p.torso.rotation.z = twitch;
+            p.lUpperArm.pivot.rotation.set(0.5 * fall, 0, 1.4 * fall);
+            p.rUpperArm.pivot.rotation.set(0.3 * fall, 0, -1.0 * fall);
+            p.lForearm.pivot.rotation.x = -0.5 * fall;
+            p.rForearm.pivot.rotation.x = -0.3 * fall;
+            p.lThigh.pivot.rotation.x = 0.4 * fall;
+            p.rThigh.pivot.rotation.x = -0.25 * fall + twitch;
+            p.lShin.pivot.rotation.x = -0.7 * fall;
+            p.rShin.pivot.rotation.x = -0.5 * fall;
+            p.head.rotation.set(-0.1 * fall, 0, 0.25 * fall + twitch * 2);
+            return;
+        }
         case CharState.GETUP: {
-            const rise = easeOut(Math.min(char.stateTimer / 0.4, 1));
-            p.torso.rotation.x = 0.3 * (1 - rise);
-            p.lThigh.pivot.rotation.x = 0.3 * (1 - rise);
-            p.rThigh.pivot.rotation.x = -0.15 * (1 - rise);
-            p.lUpperArm.pivot.rotation.set(0.2 * (1 - rise), 0, 0.3 * (1 - rise));
-            p.rUpperArm.pivot.rotation.set(0.1 * (1 - rise), 0, -0.2 * (1 - rise));
+            const rise = easeOut(Math.min(char.stateTimer / 0.5, 1));
+            const crouch = Math.max(0, 1 - rise * 1.5);
+
+            char.mesh.rotation.x = (Math.PI / 2) * 0.95 * (1 - easeOut(Math.min(char.stateTimer / 0.25, 1)));
+            char.mesh.position.y = char.position.y - 0.7 * (1 - rise);
+
+            p.torso.rotation.x = 0.4 * crouch;
+            p.lThigh.pivot.rotation.x = 0.5 * crouch;
+            p.rThigh.pivot.rotation.x = -0.2 * crouch;
+            p.lShin.pivot.rotation.x = -0.4 * crouch;
+            p.rShin.pivot.rotation.x = -0.2 * crouch;
+            p.lUpperArm.pivot.rotation.set(0.3 * crouch, 0, 0.4 * crouch);
+            p.rUpperArm.pivot.rotation.set(0.2 * crouch, 0, -0.3 * crouch);
+            p.lForearm.pivot.rotation.x = -0.3 * crouch;
+            p.rForearm.pivot.rotation.x = -0.2 * crouch;
+
+            if (rise >= 1) {
+                char.mesh.rotation.x = 0;
+                char.mesh.position.y = char.position.y;
+            }
+            return;
             break;
         }
         case CharState.KO: {

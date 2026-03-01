@@ -4,7 +4,7 @@ import { distance2D, angleBetween } from './utils.js';
 const ATTACKING_STATES = new Set([
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_RELEASE, CharState.GRAB, CharState.GRAB_SLAM,
-    CharState.ELBOW_DROP, CharState.SPECIAL_UPPERCUT,
+    CharState.DROPKICK, CharState.SPECIAL_UPPERCUT,
     CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
     CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
     CharState.SPECIAL_FLURRY, CharState.SPECIAL_CRATER, CharState.SPECIAL_CHAIN_GRAB,
@@ -12,12 +12,12 @@ const ATTACKING_STATES = new Set([
 
 const BUSY_STATES = new Set([
     CharState.HITSTUN, CharState.KNOCKBACK, CharState.LAUNCHED,
-    CharState.GROUND_BOUNCE, CharState.GETUP, CharState.KO,
+    CharState.GROUND_BOUNCE, CharState.KNOCKDOWN, CharState.GETUP, CharState.KO,
     CharState.RINGOUT, CharState.DODGE, CharState.GRAB,
     CharState.GRAB_HOLD, CharState.GRAB_SLAM, CharState.GRABBED,
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
     CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
-    CharState.ELBOW_DROP, CharState.BLOCK, CharState.BLOCK_STAGGER,
+    CharState.DROPKICK, CharState.BLOCK, CharState.BLOCK_STAGGER,
     CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
     CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
     CharState.SPECIAL_FLURRY, CharState.SPECIAL_CRATER, CharState.SPECIAL_CHAIN_GRAB,
@@ -105,6 +105,7 @@ export class BotAI {
             case 'attack': this._attack(char, target, dist, angle, dt); break;
             case 'retreat': this._retreat(char, target, dist, angle, dt); break;
             case 'rushdown': this._rushdown(char, target, dist, angle, dt); break;
+            case 'aerial': this._aerial(char, target, dist, angle, dt); break;
         }
 
         this._avoidEdge(char);
@@ -220,7 +221,10 @@ export class BotAI {
         intent.moveZ = Math.cos(angle);
         intent.sprint = true;
 
-        if (dist < 3) {
+        if (dist < 5 && dist > 2.5 && Math.random() < 0.3 * dt && char.grounded) {
+            intent.jump = true;
+            this._setState('aerial');
+        } else if (dist < 3) {
             if (Math.random() < 0.5) {
                 intent.lightAttack = true;
             } else {
@@ -325,6 +329,21 @@ export class BotAI {
         if (char.stamina > 65 || this.stateTimer > 2) {
             this._setState(Math.random() < this.aggression ? 'rushdown' : 'approach');
         }
+    }
+
+    _aerial(char, target, dist, angle, dt) {
+        const intent = char.intent;
+        intent.moveX = Math.sin(angle) * 0.5;
+        intent.moveZ = Math.cos(angle) * 0.5;
+
+        if (!char.grounded && dist < 4) {
+            intent.lightAttack = true;
+        }
+
+        if (char.grounded && this.stateTimer > 0.3) {
+            this._setState('circle');
+        }
+        if (this.stateTimer > 2) this._setState('circle');
     }
 
     _avoidEdge(char) {

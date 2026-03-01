@@ -268,6 +268,10 @@ export class Game {
                     this.scene.spawnGroundCrack(c.position);
                 }
             }
+            if (c.state === CharState.KNOCKDOWN && c.stateTimer < 0.05) {
+                this.scene.spawnDustCloud(c.position);
+                this.scene.shake(0.15);
+            }
             if (c.landingTimer > 0 && c.landingTimer < 0.02 + dt) {
                 this.scene.spawnDustCloud(c.position);
             }
