@@ -11,6 +11,7 @@ export const CharState = {
     LIGHT3: 'light3',
     HEAVY_CHARGE: 'heavy_charge',
     HEAVY_RELEASE: 'heavy_release',
+    HEAVY_SPECIAL: 'heavy_special',
     DODGE: 'dodge',
     GRAB: 'grab',
     BLOCK: 'block',
@@ -22,7 +23,7 @@ export const CharState = {
 
 export const ACTION_STATES = new Set([
     CharState.LIGHT1, CharState.LIGHT2, CharState.LIGHT3,
-    CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
+    CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE, CharState.HEAVY_SPECIAL,
     CharState.DODGE, CharState.GRAB, CharState.BLOCK,
     CharState.HITSTUN, CharState.KNOCKBACK,
     CharState.KO, CharState.RINGOUT,
@@ -253,6 +254,19 @@ export function updateCharacterAnimation(char, dt) {
             p.rightArm.material.emissiveIntensity *= 0.9;
             break;
         }
+        case CharState.HEAVY_SPECIAL: {
+            const prog = Math.sin(Math.min(char.stateTimer / 0.26, 1) * Math.PI);
+            p.body.scale.set(1.08 + prog * 0.12, 0.96, 1.08 + prog * 0.12);
+            p.body.rotation.y = -0.9 * prog;
+            p.rightArm.rotation.x = 1.2 - 3.2 * prog;
+            p.rightArm.rotation.z = -0.4 * prog;
+            p.rightArm.position.set(0.52, 0.88, 0.22 - 0.74 * prog);
+            p.leftArm.rotation.x = -0.9 + 0.2 * prog;
+            p.leftArm.position.set(-0.42, 0.9, -0.1);
+            p.rightArm.material.emissive.setHex(0xff7a22);
+            p.rightArm.material.emissiveIntensity = 0.45 + prog * 0.45;
+            break;
+        }
         case CharState.DODGE: {
             p.body.position.y = 0.55;
             p.body.scale.set(1.1, 0.65, 1.1);
@@ -316,7 +330,7 @@ export function updateCharacterAnimation(char, dt) {
         }
     }
 
-    if (st !== CharState.HEAVY_CHARGE && st !== CharState.HEAVY_RELEASE) {
+    if (st !== CharState.HEAVY_CHARGE && st !== CharState.HEAVY_RELEASE && st !== CharState.HEAVY_SPECIAL) {
         p.rightArm.material.emissiveIntensity = 0;
     }
 

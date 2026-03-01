@@ -209,7 +209,7 @@ export class Game {
                 this.ui.updateCombo(this.comboCount);
             }
 
-            const severity = hit.isKO ? 'ko' : (hit.isHeavy || hit.damage >= 20 ? 'heavy' : 'light');
+            const severity = hit.isKO ? 'ko' : (hit.isSpecialHeavy ? 'special' : (hit.isHeavy || hit.damage >= 20 ? 'heavy' : 'light'));
             this.ui.spawnHitBurst(hit.impactPosition, this.scene.camera, { severity, blocked: hit.blocked });
 
             if (hit.target === this.player) {
@@ -229,7 +229,8 @@ export class Game {
         const pickup = this.items.update(dt, this.characters);
         if (pickup && pickup.picked) {
             Audio.playPickup();
-            this.ui.showAnnouncer(`${pickup.character.name}: ${pickup.type.name}`, 1);
+            const isSpecial = pickup.type.buff === 'throwUp';
+            this.ui.showAnnouncer(`${pickup.character.name}: ${pickup.type.name}${isSpecial ? ' ⚡ SPECIAL HEAVY' : ''}`, 1.1, isSpecial);
         }
 
         this._updateLockOn();
