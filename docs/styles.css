@@ -382,6 +382,20 @@ html, body {
     box-shadow: 0 0 34px rgba(255, 95, 70, 0.88);
 }
 
+
+.hit-burst.special {
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
+    border-color: rgba(255, 138, 58, 0.95);
+    box-shadow: 0 0 30px rgba(255, 126, 44, 0.88), 0 0 58px rgba(255, 176, 92, 0.45);
+}
+
+.hit-burst.special .spark {
+    background: linear-gradient(to top, rgba(255, 235, 210, 0), rgba(255, 156, 84, 0.98));
+    height: 20px;
+}
+
 .hit-burst.blocked {
     border-color: rgba(160, 205, 255, 0.85);
     box-shadow: 0 0 18px rgba(100, 170, 255, 0.65);
@@ -417,6 +431,17 @@ html, body {
 body.impact-pulse #game-canvas {
     filter: brightness(1.06) saturate(1.15);
 }
+
+body.special-ready #game-canvas {
+    filter: saturate(1.1) contrast(1.04);
+}
+
+body.special-ready #btn-atk {
+    box-shadow: 0 0 0 2px rgba(255, 130, 64, 0.35), 0 0 22px rgba(255, 130, 64, 0.35);
+    border-color: rgba(255, 160, 92, 0.95);
+    background: rgba(255, 95, 42, 0.22);
+}
+
 #hit-flash {
     position: absolute;
     inset: 0;

@@ -69,6 +69,7 @@ export class UIManager {
             this.playerStaminaBar.style.width = `${sp}%`;
         }
 
+        document.body.classList.toggle('special-ready', !!player.buffs.throwUp && player.alive);
 
         if (this.roundTimer) {
             const seconds = Math.max(0, Math.floor(roundElapsed));
@@ -181,11 +182,12 @@ export class UIManager {
         this.hitBursts.appendChild(burst);
 
         if (severity === 'heavy') this._impactPulseTimer = Math.max(this._impactPulseTimer, 0.16);
+        if (severity === 'special') this._impactPulseTimer = Math.max(this._impactPulseTimer, 0.2);
         if (severity === 'ko') this._impactPulseTimer = Math.max(this._impactPulseTimer, 0.24);
 
         setTimeout(() => {
             if (burst.parentNode) burst.parentNode.removeChild(burst);
-        }, severity === 'ko' ? 520 : 420);
+        }, severity === 'ko' ? 520 : severity === 'special' ? 500 : 420);
     }
 
     triggerHitFlash(strong = false) {

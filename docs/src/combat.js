@@ -18,6 +18,10 @@ const ATTACKS = {
         damage: [15, 38], knockback: [9, 22], range: 2.9, halfAngle: 110,
         hitStart: 0.08, hitEnd: 0.2, duration: 0.38,
     },
+    [CharState.HEAVY_SPECIAL]: {
+        damage: [24, 52], knockback: [13, 28], range: 3.4, halfAngle: 150,
+        hitStart: 0.1, hitEnd: 0.24, duration: 0.46,
+    },
     [CharState.GRAB]: {
         damage: 13, knockback: 11, range: 1.9, halfAngle: 50,
         hitStart: 0.12, hitEnd: 0.25, duration: 0.42,
@@ -175,7 +179,8 @@ function handleActionState(char, dt) {
             char.velocity.x = 0;
             char.velocity.z = 0;
             if (!intent.heavyCharge) {
-                enterState(char, CharState.HEAVY_RELEASE);
+                const hasSpecial = char.buffs.throwUp;
+                enterState(char, hasSpecial ? CharState.HEAVY_SPECIAL : CharState.HEAVY_RELEASE);
             }
             break;
         case CharState.HEAVY_RELEASE: {
@@ -187,6 +192,18 @@ function handleActionState(char, dt) {
                 char.velocity.z *= 0.82;
             }
             const data = ATTACKS[CharState.HEAVY_RELEASE];
+            if (char.stateTimer >= data.duration) exitAction(char);
+            break;
+        }
+        case CharState.HEAVY_SPECIAL: {
+            if (char.stateTimer < 0.14) {
+                char.velocity.x = Math.sin(char.facing) * 9;
+                char.velocity.z = Math.cos(char.facing) * 9;
+            } else {
+                char.velocity.x *= 0.84;
+                char.velocity.z *= 0.84;
+            }
+            const data = ATTACKS[CharState.HEAVY_SPECIAL];
             if (char.stateTimer >= data.duration) exitAction(char);
             break;
         }
@@ -261,7 +278,8 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             attacker.attackHit = true;
 
             const isGrab = attacker.state === CharState.GRAB;
-            const isHeavy = attacker.state === CharState.HEAVY_RELEASE;
+            const isHeavy = attacker.state === CharState.HEAVY_RELEASE || attacker.state === CharState.HEAVY_SPECIAL;
+            const isSpecialHeavy = attacker.state === CharState.HEAVY_SPECIAL;
 
             let damage, knockback;
             if (isHeavy) {
@@ -274,7 +292,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             }
 
             if (attacker.buffs.damageUp) damage *= 1.3;
-            if (attacker.buffs.throwUp) knockback *= 1.5;
+            if (attacker.buffs.throwUp && !isSpecialHeavy) knockback *= 1.5;
 
             let blocked = false;
             if (target.state === CharState.BLOCK && !isGrab) {
@@ -334,6 +352,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 target,
                 damage,
                 isHeavy,
+                isSpecialHeavy,
                 blocked,
                 isKO,
                 impactPosition: { x: target.position.x, y: target.position.y, z: target.position.z },
