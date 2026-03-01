@@ -99,6 +99,7 @@ export function createCharacter(name, colorSet, isPlayer) {
         sprintAttack: false,
         landingTimer: 0,
         specialMove: null,
+        build: null,
     };
 
     const root = new THREE.Group();

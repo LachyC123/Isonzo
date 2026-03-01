@@ -1,5 +1,10 @@
 import { CharState, ACTION_STATES } from './character.js';
 import * as Audio from './audio.js';
+import {
+    getBuildDamageMult, getBuildKBMult, getBuildKBResist, getBuildMoveSpeed,
+    getBuildSprintSpeed, getBuildJumpPower, hasSuperArmor, hasQuickRecovery,
+    hasAirSuperiority, hasPowerThrow,
+} from './builds.js';
 
 const ATTACKS = {
     [CharState.LIGHT1]: {
@@ -158,7 +163,7 @@ function handleFreeState(char, dt) {
     }
 
     if (intent.jump) {
-        char.velocity.y = 13;
+        char.velocity.y = 13 * getBuildJumpPower(char);
         char.grounded = false;
         char.state = CharState.JUMP;
         return;
@@ -207,7 +212,7 @@ function handleFreeState(char, dt) {
     const moveLen = Math.sqrt(intent.moveX * intent.moveX + intent.moveZ * intent.moveZ);
     if (moveLen > 0.1) {
         const sprint = intent.sprint && char.stamina > 0;
-        const speed = sprint ? 10.5 : 6.5;
+        const speed = sprint ? 10.5 * getBuildSprintSpeed(char) : 6.5 * getBuildMoveSpeed(char);
         char.velocity.x = (intent.moveX / moveLen) * speed;
         char.velocity.z = (intent.moveZ / moveLen) * speed;
         char.facing = Math.atan2(intent.moveX, intent.moveZ);
@@ -346,6 +351,7 @@ function handleActionState(char, dt) {
                     const dir = char.facing;
                     let basekb = 18;
                     let dmg = 24;
+                    if (hasPowerThrow(char)) { dmg *= 1.4; basekb *= 1.4; }
                     if (char.buffs.damageUp) dmg *= 1.3;
                     if (char.buffs.throwUp) basekb *= 1.5;
 
@@ -489,12 +495,7 @@ function handleActionState(char, dt) {
             break;
         case CharState.KNOCKBACK:
             if (char.grounded && char.stateTimer > 0.2) {
-                const totalKB = Math.sqrt(char.knockbackVel.x ** 2 + char.knockbackVel.z ** 2);
-                if (totalKB > 15) {
-                    enterState(char, CharState.KNOCKDOWN);
-                } else {
-                    exitAction(char);
-                }
+                enterState(char, CharState.GETUP);
             } else if (char.stateTimer >= 0.6) {
                 exitAction(char);
             }
@@ -506,26 +507,21 @@ function handleActionState(char, dt) {
             }
             break;
         case CharState.GROUND_BOUNCE:
-            if (char.stateTimer >= 0.5 && char.grounded) {
-                enterState(char, CharState.KNOCKDOWN);
-            }
-            break;
-        case CharState.KNOCKDOWN:
-            char.velocity.x *= 0.92;
-            char.velocity.z *= 0.92;
-            if (char.stateTimer >= 0.8) {
+            if (char.stateTimer >= 0.4 && char.grounded) {
                 enterState(char, CharState.GETUP);
             }
             break;
-        case CharState.GETUP:
+        case CharState.GETUP: {
             char.velocity.x = 0;
             char.velocity.z = 0;
             char.iFrames = true;
-            if (char.stateTimer >= 0.5) {
+            const getupTime = hasQuickRecovery(char) ? 0.25 : 0.5;
+            if (char.stateTimer >= getupTime) {
                 char.iFrames = false;
                 exitAction(char);
             }
             break;
+        }
         case CharState.KO:
         case CharState.RINGOUT:
             break;
@@ -621,8 +617,11 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 launchPow = attackData.launch || 0;
             }
 
+            damage *= getBuildDamageMult(attacker);
+            knockback *= getBuildKBMult(attacker);
             if (attacker.buffs.damageUp) damage *= 1.3;
             if (attacker.buffs.throwUp) knockback *= 1.5;
+            if (isDropkick && hasAirSuperiority(attacker)) damage *= 1.5;
 
             let blocked = false;
             const isBig = isHeavy || isDropkick || isSpecial;
@@ -654,7 +653,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             const kbZ = dist > 0.01 ? dz / dist : Math.cos(attacker.facing);
             const pct = target.damage / 100;
             const pctMult = 1 + pct * 1.4 + pct * pct * 0.6;
-            const fKB = knockback * pctMult;
+            const fKB = knockback * pctMult * getBuildKBResist(target);
 
             target.knockbackVel.x = kbX * fKB;
             target.knockbackVel.z = kbZ * fKB;
@@ -671,6 +670,8 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 if (fKB > 14) {
                     target.knockbackVel.y = fKB * 0.2;
                     enterState(target, CharState.KNOCKBACK);
+                } else if (hasSuperArmor(target) && !isFinisher && !isBig) {
+                    // no stagger from light hits
                 } else {
                     enterState(target, CharState.HITSTUN);
                 }

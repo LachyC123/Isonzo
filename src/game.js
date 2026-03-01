@@ -12,10 +12,12 @@ import { processCharacterState, checkCombatHits } from './combat.js';
 import { updatePhysics, checkRingOut, checkCharacterCollisions } from './physics.js';
 import { CHAR_COLORS } from './utils.js';
 import * as Audio from './audio.js';
+import { BUILDS, applyBuild } from './builds.js';
 
 const GameState = {
     MENU: 'menu',
     MODE_SELECT: 'mode_select',
+    BUILD_SELECT: 'build_select',
     COUNTDOWN: 'countdown',
     PLAYING: 'playing',
     SLOWMO: 'slowmo',
@@ -57,6 +59,7 @@ export class Game {
 
         this.slowMoTarget = null;
         this.slowMoScale = 1;
+        this.playerBuild = null;
     }
 
     init(canvas) {
@@ -144,23 +147,15 @@ export class Game {
             this.gameMode = 'ffa';
             this._resetCharColors();
             this.maxRounds = 3;
-            this.startMatch();
+            this._showBuildSelect();
         });
         click('btn-teams', () => {
             this.gameMode = 'teams';
-            this.characters[0].team = 'blue';
-            this.characters[0].name = 'YOU';
-            this.characters[1].team = 'blue';
-            this.characters[1].name = 'ALLY';
-            this.characters[2].team = 'red';
-            this.characters[2].name = 'FOE 1';
-            this.characters[3].team = 'red';
-            this.characters[3].name = 'FOE 2';
-            this._applyTeamColors();
             this.maxRounds = 5;
-            this.startMatch();
+            this._showBuildSelect();
         });
         click('btn-mode-back', () => this.ui.showScreen('main-menu'));
+        click('btn-build-back', () => this.ui.showScreen('mode-select'));
         click('btn-controls', () => this.ui.showScreen('controls-screen'));
         click('btn-back', () => this.ui.showScreen('main-menu'));
         click('btn-play-again', () => {
@@ -176,6 +171,69 @@ export class Game {
             this._resetCharColors();
             this._hideAll();
         });
+    }
+
+    _showBuildSelect() {
+        this.state = GameState.BUILD_SELECT;
+        this.ui.showScreen('build-select');
+
+        for (const cat of ['tall', 'medium', 'short']) {
+            const container = document.getElementById(`builds-${cat}`);
+            if (!container) continue;
+            container.innerHTML = '';
+            const catBuilds = BUILDS.filter(b => b.category === cat);
+            for (const build of catBuilds) {
+                const card = document.createElement('button');
+                card.className = 'build-card';
+                const sizeIcon = cat === 'tall' ? '&#9650;&#9650;' : (cat === 'short' ? '&#9660;' : '&#9644;');
+                const speedPips = Math.round(build.stats.moveSpeed * 3);
+                const powerPips = Math.round(build.stats.damageMult * 3);
+                const toughPips = Math.round((1 / build.stats.knockbackResist) * 3);
+                card.innerHTML = `
+                    <div class="build-name" style="color:#${build.color.toString(16).padStart(6,'0')}">${build.name}</div>
+                    <div class="build-size">${sizeIcon}</div>
+                    <div class="build-desc">${build.desc}</div>
+                    <div class="build-passive">${build.passive}</div>
+                    <div class="build-stats">
+                        ${this._statBar('SPD', speedPips)}
+                        ${this._statBar('PWR', powerPips)}
+                        ${this._statBar('DEF', toughPips)}
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    Audio.resumeAudio();
+                    Audio.playUIClick();
+                    this._selectBuild(build);
+                });
+                container.appendChild(card);
+            }
+        }
+    }
+
+    _statBar(label, filled) {
+        let dots = '';
+        for (let i = 0; i < 4; i++) {
+            dots += `<span class="stat-pip ${i < filled ? 'filled' : ''}"></span>`;
+        }
+        return `<div style="text-align:center"><div style="font-size:0.45rem;color:rgba(255,255,255,0.3);margin-bottom:1px">${label}</div>${dots}</div>`;
+    }
+
+    _selectBuild(build) {
+        this.playerBuild = build;
+
+        if (this.gameMode === 'teams') {
+            this.characters[0].team = 'blue';
+            this.characters[0].name = 'YOU';
+            this.characters[1].team = 'blue';
+            this.characters[1].name = 'ALLY';
+            this.characters[2].team = 'red';
+            this.characters[2].name = 'FOE 1';
+            this.characters[3].team = 'red';
+            this.characters[3].name = 'FOE 2';
+            this._applyTeamColors();
+        }
+
+        this.startMatch();
     }
 
     startMatch() {
@@ -207,6 +265,14 @@ export class Game {
             c.facing = Math.atan2(-spots[i].x, -spots[i].z);
             c.buffs = { damageUp: false, staminaUp: false, regenUp: false, throwUp: false };
             c.maxStamina = 100;
+        }
+
+        if (this.playerBuild) {
+            applyBuild(this.player, this.playerBuild);
+        }
+        for (let i = 0; i < this.bots.length; i++) {
+            const randomBuild = BUILDS[Math.floor(Math.random() * BUILDS.length)];
+            applyBuild(this.bots[i], randomBuild);
         }
 
         for (const ai of this.botAIs) ai.reset();
@@ -244,6 +310,7 @@ export class Game {
         switch (this.state) {
             case GameState.MENU:
             case GameState.MODE_SELECT:
+            case GameState.BUILD_SELECT:
                 this._updateMenu(dt); break;
             case GameState.COUNTDOWN: this._updateCountdown(dt); break;
             case GameState.PLAYING: this._updatePlaying(dt); break;
