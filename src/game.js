@@ -362,6 +362,7 @@ export class Game {
         intent.dodge = this.input.wantDodge;
         intent.grab = this.input.wantGrab;
         intent.block = this.input.wantBlock;
+        intent.special = this.input.wantSpecial;
     }
 
     _updateLockOn() {

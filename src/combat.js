@@ -20,7 +20,7 @@ const ATTACKS = {
     },
     [CharState.DROPKICK]: {
         damage: 20, knockback: 16, range: 2.8, halfAngle: 90,
-        hitStart: 0.08, hitEnd: 0.25, duration: 0.5, launch: 5,
+        hitStart: 0.06, hitEnd: 0.22, duration: 0.45, launch: 5,
     },
     [CharState.SPECIAL_UPPERCUT]: {
         damage: 25, knockback: 14, range: 2.6, halfAngle: 90,
@@ -98,6 +98,17 @@ export function processCharacterState(char, dt) {
     if (char.state === CharState.GRABBED) {
         char.stateTimer += dt;
         char.velocity.set(0, 0, 0);
+        if ((char.intent.dodge || char.intent.lightAttack) && char.stateTimer > 0.15 && char.stateTimer < 0.4) {
+            if (char.grabbedBy) {
+                enterState(char.grabbedBy, CharState.BLOCK_STAGGER);
+                char.grabbedBy.grabTarget = null;
+                char.grabbedBy.knockbackVel.x = Math.sin(char.facing) * 5;
+                char.grabbedBy.knockbackVel.z = Math.cos(char.facing) * 5;
+                char.grabbedBy = null;
+            }
+            exitAction(char);
+            Audio.playDodge();
+        }
         return;
     }
     if (char.hitstopTimer > 0) return;
@@ -116,9 +127,8 @@ export function processCharacterState(char, dt) {
 function handleFreeState(char, dt) {
     const intent = char.intent;
 
-    if (intent.heavyCharge && char.specialMove) {
+    if (intent.special && char.specialMove) {
         enterState(char, char.specialMove);
-        char.specialMove = null;
         return;
     }
 
@@ -137,7 +147,9 @@ function handleFreeState(char, dt) {
 
         if (intent.lightAttack) {
             enterState(char, CharState.DROPKICK);
-            char.velocity.y = Math.max(char.velocity.y, -5);
+            char.velocity.x = Math.sin(char.facing) * 13;
+            char.velocity.z = Math.cos(char.facing) * 13;
+            char.velocity.y = 2;
             return;
         }
 
@@ -265,16 +277,12 @@ function handleActionState(char, dt) {
             break;
         }
         case CharState.DROPKICK: {
-            if (char.stateTimer < 0.25) {
-                char.velocity.x = Math.sin(char.facing) * 12;
-                char.velocity.z = Math.cos(char.facing) * 12;
+            if (char.stateTimer < 0.22) {
+                char.velocity.x = Math.sin(char.facing) * 13;
+                char.velocity.z = Math.cos(char.facing) * 13;
             } else {
-                char.velocity.x *= 0.82;
-                char.velocity.z *= 0.82;
-            }
-            if (char.grounded && char.stateTimer > 0.2) {
-                char.velocity.x *= 0.5;
-                char.velocity.z *= 0.5;
+                char.velocity.x *= 0.78;
+                char.velocity.z *= 0.78;
             }
             const data = ATTACKS[CharState.DROPKICK];
             if (char.stateTimer >= data.duration) exitAction(char);
@@ -336,10 +344,10 @@ function handleActionState(char, dt) {
                     tgt.grabbedBy = null;
 
                     const dir = char.facing;
-                    let basekb = 16;
-                    let dmg = 20;
+                    let basekb = 18;
+                    let dmg = 24;
                     if (char.buffs.damageUp) dmg *= 1.3;
-                    if (char.buffs.throwUp) { basekb *= 1.5; }
+                    if (char.buffs.throwUp) basekb *= 1.5;
 
                     tgt.damage += dmg;
                     const pct = tgt.damage / 100;
@@ -480,15 +488,15 @@ function handleActionState(char, dt) {
             if (char.stateTimer >= 0.28) exitAction(char);
             break;
         case CharState.KNOCKBACK:
-            if (char.grounded && char.stateTimer > 0.15) {
-                const totalKB = Math.sqrt(
-                    char.knockbackVel.x ** 2 + char.knockbackVel.z ** 2
-                );
-                if (totalKB > 8 || char.stateTimer >= 0.5) {
+            if (char.grounded && char.stateTimer > 0.2) {
+                const totalKB = Math.sqrt(char.knockbackVel.x ** 2 + char.knockbackVel.z ** 2);
+                if (totalKB > 15) {
                     enterState(char, CharState.KNOCKDOWN);
-                } else if (char.stateTimer >= 0.5) {
+                } else {
                     exitAction(char);
                 }
+            } else if (char.stateTimer >= 0.6) {
+                exitAction(char);
             }
             break;
         case CharState.LAUNCHED:
@@ -498,21 +506,25 @@ function handleActionState(char, dt) {
             }
             break;
         case CharState.GROUND_BOUNCE:
-            if (char.stateTimer >= 0.6 && char.grounded) {
+            if (char.stateTimer >= 0.5 && char.grounded) {
                 enterState(char, CharState.KNOCKDOWN);
             }
             break;
         case CharState.KNOCKDOWN:
-            char.velocity.x *= 0.9;
-            char.velocity.z *= 0.9;
-            if (char.stateTimer >= 1.0) {
+            char.velocity.x *= 0.92;
+            char.velocity.z *= 0.92;
+            if (char.stateTimer >= 0.8) {
                 enterState(char, CharState.GETUP);
             }
             break;
         case CharState.GETUP:
             char.velocity.x = 0;
             char.velocity.z = 0;
-            if (char.stateTimer >= 0.4) exitAction(char);
+            char.iFrames = true;
+            if (char.stateTimer >= 0.5) {
+                char.iFrames = false;
+                exitAction(char);
+            }
             break;
         case CharState.KO:
         case CharState.RINGOUT:
@@ -528,14 +540,13 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
 
         if (attacker.state === CharState.GRAB && !attacker.attackHit) {
             const data = ATTACKS[CharState.GRAB];
-            const grabRange = attacker.buffs.throwUp ? data.range + 0.8 : data.range;
             if (attacker.stateTimer >= data.hitStart && attacker.stateTimer <= data.hitEnd) {
                 for (const target of characters) {
                     if (target === attacker || !target.alive || target.iFrames) continue;
                     const dx = target.position.x - attacker.position.x;
                     const dz = target.position.z - attacker.position.z;
                     const dist = Math.sqrt(dx * dx + dz * dz);
-                    if (dist > grabRange) continue;
+                    if (dist > data.range) continue;
 
                     const aToT = Math.atan2(dx, dz);
                     let aDiff = aToT - attacker.facing;
@@ -590,7 +601,11 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             attacker.attackHit = true;
             const isHeavy = attacker.state === CharState.HEAVY_RELEASE;
             const isFinisher = attacker.state === CharState.LIGHT3;
-            const isElbow = attacker.state === CharState.DROPKICK;
+            const isDropkick = attacker.state === CharState.DROPKICK;
+            const isSpecial = [CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK,
+                CharState.SPECIAL_SPIN, CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
+                CharState.SPECIAL_FLURRY, CharState.SPECIAL_CRATER, CharState.SPECIAL_CHAIN_GRAB,
+            ].includes(attacker.state);
 
             let damage, knockback, launchPow;
             if (isHeavy) {
@@ -608,11 +623,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             if (attacker.buffs.throwUp) knockback *= 1.5;
 
             let blocked = false;
-            const isSpecial = [
-                CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
-                CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
-                CharState.SPECIAL_FLURRY, CharState.SPECIAL_CRATER, CharState.SPECIAL_CHAIN_GRAB,
-            ].includes(attacker.state);
+            const isBig = isHeavy || isDropkick || isSpecial;
             if (target.state === CharState.BLOCK) {
                 damage *= 0.15;
                 knockback *= 0.15;
@@ -624,9 +635,9 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                     attacker.position.x - target.position.x,
                     attacker.position.z - target.position.z
                 );
-                attacker.knockbackVel.x = Math.sin(pushDir) * 4;
-                attacker.knockbackVel.z = Math.cos(pushDir) * 4;
-            } else if (isHeavy || isElbow || isSpecial) {
+                attacker.knockbackVel.x = Math.sin(pushDir) * 5;
+                attacker.knockbackVel.z = Math.cos(pushDir) * 5;
+            } else if (isBig) {
                 Audio.playHeavyHit();
             } else if (isFinisher) {
                 Audio.playHeavyHit();
@@ -651,11 +662,11 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 target.grounded = false;
                 enterState(target, CharState.LAUNCHED);
                 target.bounceCount = 0;
-            } else if ((isHeavy || isElbow || damage >= 16) && !blocked) {
+            } else if (isBig && !blocked) {
                 target.knockbackVel.y = fKB * 0.35;
                 enterState(target, CharState.KNOCKBACK);
             } else if (!blocked) {
-                if (fKB > 12) {
+                if (fKB > 14) {
                     target.knockbackVel.y = fKB * 0.2;
                     enterState(target, CharState.KNOCKBACK);
                 } else {
@@ -663,13 +674,12 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 }
             }
 
-            const isBig = isHeavy || isElbow || isSpecial;
             const hsTime = isBig ? 0.13 : (isFinisher ? 0.08 : 0.04);
             attacker.hitstopTimer = hsTime;
             target.hitstopTimer = hsTime;
 
             if ((isBig || isFinisher) && sceneManager) {
-                sceneManager.shake(isHeavy ? 0.6 : (isSpecial ? 0.55 : (isElbow ? 0.5 : 0.35)));
+                sceneManager.shake(isHeavy ? 0.6 : (isSpecial ? 0.55 : (isDropkick ? 0.45 : 0.35)));
             }
 
             if (uiManager && camera) {

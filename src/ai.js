@@ -55,6 +55,7 @@ export class BotAI {
         intent.dodge = false;
         intent.grab = false;
         intent.block = false;
+        intent.special = false;
 
         if (BUSY_STATES.has(char.state)) {
             if (this.doingHeavy && char.state === CharState.HEAVY_CHARGE) {
@@ -75,6 +76,9 @@ export class BotAI {
             }
             if (char.state === CharState.LIGHT1 || char.state === CharState.LIGHT2) {
                 intent.lightAttack = true;
+            }
+            if (char.state === CharState.GRABBED && Math.random() < this.difficulty * 0.6 * dt * 60) {
+                intent.dodge = true;
             }
             return;
         }
@@ -165,7 +169,7 @@ export class BotAI {
 
         if (target.state === CharState.BLOCK_STAGGER && dist < 3) {
             if (char.specialMove) {
-                char.intent.heavyCharge = true;
+                char.intent.special = true;
             } else {
                 char.intent.lightAttack = true;
             }
@@ -283,11 +287,9 @@ export class BotAI {
             if (this.comboCount < 3 && dist < 3.2) {
                 const roll = Math.random();
 
-                if (char.specialMove && roll < 0.4 && dist < 3) {
-                    this.doingHeavy = true;
-                    this.heavyTimer = 0.01;
-                    intent.heavyCharge = true;
-                    this._setState('idle');
+                if (char.specialMove && roll < 0.35 && dist < 3) {
+                    intent.special = true;
+                    this._setState('circle');
                 } else if (this.comboCount === 0 && roll < 0.25 && dist < 2.5) {
                     this.doingHeavy = true;
                     this.heavyTimer = 0.3 + Math.random() * 1.0;

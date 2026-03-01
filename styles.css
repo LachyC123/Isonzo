@@ -681,6 +681,19 @@ html, body {
     background: rgba(180,180,220,0.1);
 }
 
+#btn-spc {
+    right: 0;
+    bottom: 0;
+    width: 50px; height: 50px;
+    background: rgba(255,150,50,0.2);
+    border-color: rgba(255,180,50,0.5);
+    font-size: 0.55rem;
+}
+
+#btn-spc:active {
+    background: rgba(255,180,50,0.4);
+}
+
 /* ── Media queries ── */
 @media (max-width: 600px) {
     #player-stats { width: clamp(110px, 38vw, 180px); }

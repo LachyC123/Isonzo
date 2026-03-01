@@ -58,6 +58,7 @@ export function createIntent() {
         sprint: false, jump: false,
         lightAttack: false, heavyCharge: false,
         dodge: false, grab: false, block: false,
+        special: false,
     };
 }
 

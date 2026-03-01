@@ -122,6 +122,7 @@ export class InputManager {
         bind('btn-dge', 'dodge');
         bind('btn-grb', 'grab');
         bind('btn-blk', 'block');
+        bind('btn-spc', 'special');
     }
 
     justPressed(code) { return this._justPressedKeys.has(code); }
@@ -171,6 +172,10 @@ export class InputManager {
 
     get wantBlock() {
         return this.keys['KeyR'] || this.touchHeld.block;
+    }
+
+    get wantSpecial() {
+        return this.justPressed('KeyF') || this.justTouched('special');
     }
 
     get wantSprint() {
