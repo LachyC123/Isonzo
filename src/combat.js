@@ -3,16 +3,16 @@ import * as Audio from './audio.js';
 
 const ATTACKS = {
     [CharState.LIGHT1]: {
-        damage: 8, knockback: 4, range: 2.4, halfAngle: 80,
+        damage: 8, knockback: 5, range: 2.4, halfAngle: 80,
         hitStart: 0.05, hitEnd: 0.14, duration: 0.24, launch: 0,
     },
     [CharState.LIGHT2]: {
-        damage: 10, knockback: 4.5, range: 2.4, halfAngle: 80,
+        damage: 10, knockback: 6, range: 2.4, halfAngle: 80,
         hitStart: 0.05, hitEnd: 0.14, duration: 0.24, launch: 0,
     },
     [CharState.LIGHT3]: {
-        damage: 18, knockback: 9, range: 2.8, halfAngle: 120,
-        hitStart: 0.1, hitEnd: 0.2, duration: 0.38, launch: 6,
+        damage: 18, knockback: 11, range: 2.8, halfAngle: 120,
+        hitStart: 0.1, hitEnd: 0.2, duration: 0.38, launch: 7,
     },
     [CharState.HEAVY_RELEASE]: {
         damage: [15, 42], knockback: [10, 26], range: 3.0, halfAngle: 130,
@@ -335,10 +335,11 @@ function handleActionState(char, dt) {
                     if (char.buffs.throwUp) { basekb *= 1.5; }
 
                     tgt.damage += dmg;
-                    const pctMult = 1 + (tgt.damage / 100) * 0.85;
+                    const pct = tgt.damage / 100;
+                    const pctMult = 1 + pct * 1.4 + pct * pct * 0.6;
                     const finalKb = basekb * pctMult;
 
-                    tgt.knockbackVel.set(Math.sin(dir) * finalKb, 11 * pctMult, Math.cos(dir) * finalKb);
+                    tgt.knockbackVel.set(Math.sin(dir) * finalKb, 12 * pctMult, Math.cos(dir) * finalKb);
                     tgt.grounded = false;
                     tgt.bounceCount = 0;
                     char.damageDealt += dmg;
@@ -615,7 +616,8 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
 
             const kbX = dist > 0.01 ? dx / dist : Math.sin(attacker.facing);
             const kbZ = dist > 0.01 ? dz / dist : Math.cos(attacker.facing);
-            const pctMult = 1 + (target.damage / 100) * 0.8;
+            const pct = target.damage / 100;
+            const pctMult = 1 + pct * 1.4 + pct * pct * 0.6;
             const fKB = knockback * pctMult;
 
             target.knockbackVel.x = kbX * fKB;
@@ -630,7 +632,12 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                 target.knockbackVel.y = fKB * 0.35;
                 enterState(target, CharState.KNOCKBACK);
             } else if (!blocked) {
-                enterState(target, CharState.HITSTUN);
+                if (fKB > 12) {
+                    target.knockbackVel.y = fKB * 0.2;
+                    enterState(target, CharState.KNOCKBACK);
+                } else {
+                    enterState(target, CharState.HITSTUN);
+                }
             }
 
             const isBig = isHeavy || isElbow || isSpecial;

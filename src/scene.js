@@ -22,6 +22,9 @@ export class SceneManager {
         this.particles = [];
         this.particlePool = [];
         this.trails = [];
+        this.edgeRing = null;
+        this.spotlights = [];
+        this.time = 0;
     }
 
     init(canvas) {
@@ -133,14 +136,14 @@ export class SceneManager {
             ));
         }
 
-        const edgeGeo = new THREE.TorusGeometry(r, 0.22, 12, 80);
+        const edgeGeo = new THREE.TorusGeometry(r, 0.28, 12, 80);
         const edgeMat = new THREE.MeshPhongMaterial({
             color: 0xff6600, emissive: 0xdd4400, emissiveIntensity: 0.6,
         });
-        const edge = new THREE.Mesh(edgeGeo, edgeMat);
-        edge.rotation.x = Math.PI / 2;
-        edge.position.y = 0;
-        this.scene.add(edge);
+        this.edgeRing = new THREE.Mesh(edgeGeo, edgeMat);
+        this.edgeRing.rotation.x = Math.PI / 2;
+        this.edgeRing.position.y = 0;
+        this.scene.add(this.edgeRing);
 
         const innerEdgeGeo = new THREE.TorusGeometry(r - 0.5, 0.06, 8, 80);
         const innerEdgeMat = new THREE.MeshPhongMaterial({
@@ -151,6 +154,49 @@ export class SceneManager {
         innerEdge.rotation.x = Math.PI / 2;
         innerEdge.position.y = 0.01;
         this.scene.add(innerEdge);
+
+        const logoGeo = new THREE.RingGeometry(2.0, 2.5, 5);
+        const logoMat = new THREE.MeshBasicMaterial({
+            color: 0xffbb44, transparent: true, opacity: 0.12, side: THREE.DoubleSide,
+        });
+        const logo = new THREE.Mesh(logoGeo, logoMat);
+        logo.rotation.x = -Math.PI / 2;
+        logo.position.y = 0.016;
+        this.scene.add(logo);
+
+        const logoInner = new THREE.Mesh(
+            new THREE.CircleGeometry(1.8, 32),
+            new THREE.MeshBasicMaterial({
+                color: 0xffaa33, transparent: true, opacity: 0.06, side: THREE.DoubleSide,
+            })
+        );
+        logoInner.rotation.x = -Math.PI / 2;
+        logoInner.position.y = 0.014;
+        this.scene.add(logoInner);
+
+        for (let i = 0; i < 4; i++) {
+            const sl = new THREE.SpotLight(0xffeedd, 0.3, 50, Math.PI / 8, 0.5);
+            const a = (i / 4) * Math.PI * 2;
+            sl.position.set(Math.cos(a) * 20, 18, Math.sin(a) * 20);
+            sl.target.position.set(0, 0, 0);
+            this.scene.add(sl);
+            this.scene.add(sl.target);
+            this.spotlights.push(sl);
+        }
+
+        for (let i = 0; i < 60; i++) {
+            const a = (i / 60) * Math.PI * 2 + (Math.random() - 0.5) * 0.08;
+            const dist = r + 3 + Math.random() * 2;
+            const h = 0.6 + Math.random() * 0.5;
+            const crowdGeo = new THREE.CapsuleGeometry(0.15, h * 0.3, 3, 4);
+            const shade = 0x10 + Math.floor(Math.random() * 0x0a);
+            const crowdMat = new THREE.MeshPhongMaterial({
+                color: (shade << 16) | (shade << 8) | (shade + 0x08),
+            });
+            const person = new THREE.Mesh(crowdGeo, crowdMat);
+            person.position.set(Math.cos(a) * dist, h * 0.5 - 0.3, Math.sin(a) * dist);
+            this.scene.add(person);
+        }
 
         for (let i = 0; i < 12; i++) {
             const a = (i / 12) * Math.PI * 2;
@@ -375,6 +421,15 @@ export class SceneManager {
     }
 
     updateParticles(dt) {
+        this.time += dt;
+        if (this.edgeRing) {
+            this.edgeRing.material.emissiveIntensity = 0.4 + Math.sin(this.time * 2) * 0.2;
+        }
+        for (let i = 0; i < this.spotlights.length; i++) {
+            const sl = this.spotlights[i];
+            const a = (i / 4) * Math.PI * 2 + this.time * 0.3;
+            sl.target.position.set(Math.cos(a) * 8, 0, Math.sin(a) * 8);
+        }
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             p.life += dt;
