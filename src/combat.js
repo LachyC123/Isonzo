@@ -42,6 +42,18 @@ const ATTACKS = {
         damage: 26, knockback: 20, range: 2.2, halfAngle: 95,
         hitStart: 0.26, hitEnd: 0.4, duration: 0.52, launch: 12,
     },
+    [CharState.SPECIAL_FLURRY]: {
+        damage: 17, knockback: 11, range: 2.9, halfAngle: 140,
+        hitStart: 0.08, hitEnd: 0.34, duration: 0.5, launch: 2,
+    },
+    [CharState.SPECIAL_CRATER]: {
+        damage: 30, knockback: 23, range: 2.8, halfAngle: 110,
+        hitStart: 0.2, hitEnd: 0.36, duration: 0.54, launch: 8,
+    },
+    [CharState.SPECIAL_CHAIN_GRAB]: {
+        damage: 28, knockback: 20, range: 2.35, halfAngle: 80,
+        hitStart: 0.12, hitEnd: 0.34, duration: 0.52, launch: 10,
+    },
     [CharState.GRAB]: {
         damage: 0, knockback: 0, range: 2.1, halfAngle: 60,
         hitStart: 0.08, hitEnd: 0.2, duration: 0.42, launch: 0,
@@ -166,9 +178,10 @@ function handleFreeState(char, dt) {
         Audio.playDodge();
         return;
     }
-    if (intent.grab && char.stamina >= 25) {
+    const grabCost = char.buffs.throwUp ? 18 : 25;
+    if (intent.grab && char.stamina >= grabCost) {
         enterState(char, CharState.GRAB);
-        char.stamina -= 25;
+        char.stamina -= grabCost;
         char.staminaRegenDelay = 0.5;
         return;
     }
@@ -401,6 +414,48 @@ function handleActionState(char, dt) {
             if (char.stateTimer >= 0.52) exitAction(char);
             break;
         }
+        case CharState.SPECIAL_FLURRY: {
+            if (char.stateTimer < 0.08) {
+                char.velocity.x = Math.sin(char.facing) * 7;
+                char.velocity.z = Math.cos(char.facing) * 7;
+            } else if (char.stateTimer < 0.34) {
+                char.velocity.x = Math.sin(char.facing) * 8.5;
+                char.velocity.z = Math.cos(char.facing) * 8.5;
+            } else {
+                char.velocity.x *= 0.82;
+                char.velocity.z *= 0.82;
+            }
+            if (char.stateTimer >= 0.5) exitAction(char);
+            break;
+        }
+        case CharState.SPECIAL_CRATER: {
+            if (char.stateTimer < 0.16) {
+                char.velocity.x *= 0.65;
+                char.velocity.z *= 0.65;
+            } else if (char.stateTimer < 0.32) {
+                char.velocity.x = Math.sin(char.facing) * 5.5;
+                char.velocity.z = Math.cos(char.facing) * 5.5;
+            } else {
+                char.velocity.x *= 0.75;
+                char.velocity.z *= 0.75;
+            }
+            if (char.stateTimer >= 0.54) exitAction(char);
+            break;
+        }
+        case CharState.SPECIAL_CHAIN_GRAB: {
+            if (char.stateTimer < 0.1) {
+                char.velocity.x = Math.sin(char.facing) * 7.5;
+                char.velocity.z = Math.cos(char.facing) * 7.5;
+            } else if (char.stateTimer < 0.28) {
+                char.velocity.x = Math.sin(char.facing) * 4.5;
+                char.velocity.z = Math.cos(char.facing) * 4.5;
+            } else {
+                char.velocity.x *= 0.82;
+                char.velocity.z *= 0.82;
+            }
+            if (char.stateTimer >= 0.52) exitAction(char);
+            break;
+        }
         case CharState.BLOCK:
             char.velocity.x = 0;
             char.velocity.z = 0;
@@ -449,13 +504,14 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
 
         if (attacker.state === CharState.GRAB && !attacker.attackHit) {
             const data = ATTACKS[CharState.GRAB];
+            const grabRange = attacker.buffs.throwUp ? data.range + 0.8 : data.range;
             if (attacker.stateTimer >= data.hitStart && attacker.stateTimer <= data.hitEnd) {
                 for (const target of characters) {
                     if (target === attacker || !target.alive || target.iFrames) continue;
                     const dx = target.position.x - attacker.position.x;
                     const dz = target.position.z - attacker.position.z;
                     const dist = Math.sqrt(dx * dx + dz * dz);
-                    if (dist > data.range) continue;
+                    if (dist > grabRange) continue;
 
                     const aToT = Math.atan2(dx, dz);
                     let aDiff = aToT - attacker.facing;
@@ -531,6 +587,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             const isSpecial = [
                 CharState.SPECIAL_UPPERCUT, CharState.SPECIAL_DROPKICK, CharState.SPECIAL_SPIN,
                 CharState.SPECIAL_LARIAT, CharState.SPECIAL_SUPLEX,
+                CharState.SPECIAL_FLURRY, CharState.SPECIAL_CRATER, CharState.SPECIAL_CHAIN_GRAB,
             ].includes(attacker.state);
             if (target.state === CharState.BLOCK) {
                 damage *= 0.15;
