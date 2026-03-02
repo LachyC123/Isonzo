@@ -24,6 +24,8 @@ export class SceneManager {
         this.trails = [];
         this.edgeRing = null;
         this.spotlights = [];
+        this.energyBands = [];
+        this.centerGlyph = null;
         this.time = 0;
     }
 
@@ -112,6 +114,22 @@ export class SceneManager {
             this.scene.add(ringMesh);
         }
 
+        const inlayMat = new THREE.MeshBasicMaterial({
+            color: 0x5b78ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide,
+        });
+        for (let i = 0; i < 3; i++) {
+            const radius = 7 + i * 4.6;
+            const inlay = new THREE.Mesh(
+                new THREE.RingGeometry(radius - 0.12, radius + 0.12, 96),
+                inlayMat.clone()
+            );
+            inlay.rotation.x = -Math.PI / 2;
+            inlay.position.y = 0.02 + i * 0.003;
+            inlay.material.opacity = 0.08 + i * 0.03;
+            this.scene.add(inlay);
+            this.energyBands.push(inlay);
+        }
+
         const centerGeo = new THREE.RingGeometry(4.8, 5.5, 64);
         const centerMat = new THREE.MeshPhongMaterial({
             color: 0xffaa33, emissive: 0x553300,
@@ -173,6 +191,17 @@ export class SceneManager {
         logoInner.rotation.x = -Math.PI / 2;
         logoInner.position.y = 0.014;
         this.scene.add(logoInner);
+
+        this.centerGlyph = new THREE.Mesh(
+            new THREE.TorusGeometry(3.15, 0.08, 8, 24),
+            new THREE.MeshPhongMaterial({
+                color: 0x7aa3ff, emissive: 0x2d5cff, emissiveIntensity: 0.45,
+                transparent: true, opacity: 0.55,
+            })
+        );
+        this.centerGlyph.rotation.set(Math.PI / 2, 0, 0);
+        this.centerGlyph.position.y = 0.27;
+        this.scene.add(this.centerGlyph);
 
         for (let i = 0; i < 4; i++) {
             const sl = new THREE.SpotLight(0xffeedd, 0.3, 50, Math.PI / 8, 0.5);
@@ -428,6 +457,14 @@ export class SceneManager {
         if (this.dangerZone) {
             this.dangerZone.material.opacity = 0.4 + Math.sin(this.time * 1.5) * 0.12;
             this.dangerZone.material.emissiveIntensity = 0.3 + Math.sin(this.time * 3) * 0.15;
+        }
+        for (let i = 0; i < this.energyBands.length; i++) {
+            const band = this.energyBands[i];
+            band.material.opacity = 0.08 + Math.sin(this.time * (1.2 + i * 0.35) + i) * 0.04 + i * 0.025;
+        }
+        if (this.centerGlyph) {
+            this.centerGlyph.rotation.z = this.time * 0.45;
+            this.centerGlyph.material.emissiveIntensity = 0.35 + Math.sin(this.time * 2.5) * 0.2;
         }
         for (let i = 0; i < this.spotlights.length; i++) {
             const sl = this.spotlights[i];

@@ -40,6 +40,7 @@ export class BotAI {
         this.aggression = 0.4 + Math.random() * 0.4;
         this.preferGrab = Math.random() > 0.5;
         this.patience = 0.5 + Math.random() * 1.0;
+        this.grabReadCooldown = 0;
     }
 
     update(dt, char, allChars) {
@@ -85,6 +86,7 @@ export class BotAI {
 
         this.stateTimer += dt;
         this.decisionTimer -= dt;
+        this.grabReadCooldown = Math.max(0, this.grabReadCooldown - dt);
 
         const enemies = allChars.filter(c => c.alive);
         if (enemies.length === 0) return;
@@ -141,9 +143,15 @@ export class BotAI {
 
             const reaction = this.difficulty * 0.5 * dt;
 
-            if (other.state === CharState.GRAB && Math.random() < reaction * 2) {
+            if (
+                other.state === CharState.GRAB
+                && d < 2.4
+                && this.grabReadCooldown <= 0
+                && Math.random() < reaction * (0.4 + this.difficulty * 0.8)
+            ) {
                 char.intent.lightAttack = true;
                 char.facing = angleBetween(char.position.x, char.position.z, other.position.x, other.position.z);
+                this.grabReadCooldown = 0.55 + Math.random() * 0.45;
                 return true;
             }
 
@@ -162,7 +170,7 @@ export class BotAI {
             }
         }
 
-        if (target.state === CharState.BLOCK && dist < 2.5 && Math.random() < 0.6 * dt) {
+        if (target.state === CharState.BLOCK && dist < 2.5 && Math.random() < (0.25 + this.aggression * 0.2) * dt * 60) {
             char.intent.grab = true;
             return true;
         }
@@ -254,7 +262,7 @@ export class BotAI {
             if (roll < 0.3 && inRange) {
                 this._setState('attack');
                 this.comboCount = 0;
-            } else if (roll < 0.45 && inRange && this.preferGrab && char.stamina >= 25) {
+            } else if (roll < 0.4 && inRange && this.preferGrab && char.stamina >= 28) {
                 intent.grab = true;
                 this._setState('idle');
             } else if (roll < 0.55 && inRange && char.stamina >= 25) {
@@ -295,7 +303,7 @@ export class BotAI {
                     this.heavyTimer = 0.3 + Math.random() * 1.0;
                     intent.heavyCharge = true;
                     this._setState('idle');
-                } else if (this.comboCount === 0 && roll < 0.4 && dist < 2.2 && char.stamina >= 25) {
+                } else if (this.comboCount === 0 && roll < 0.34 && dist < 2.05 && char.stamina >= 28) {
                     intent.grab = true;
                     this._setState('circle');
                 } else {
@@ -374,5 +382,6 @@ export class BotAI {
         this.heavyTimer = 0;
         this.blocking = false;
         this.blockTimer = 0;
+        this.grabReadCooldown = 0;
     }
 }
