@@ -100,10 +100,20 @@ export function processCharacterState(char, dt) {
         }
         return;
     }
+    char.grabEscapeLock = Math.max(0, (char.grabEscapeLock || 0) - dt);
+
     if (char.state === CharState.GRABBED) {
         char.stateTimer += dt;
         char.velocity.set(0, 0, 0);
-        if ((char.intent.dodge || char.intent.lightAttack) && char.stateTimer > 0.15 && char.stateTimer < 0.4) {
+        const inEscapeWindow = char.stateTimer > 0.15 && char.stateTimer < 0.4;
+        const mashing = char.intent.dodge || char.intent.lightAttack;
+        if (inEscapeWindow && mashing) {
+            char.grabStruggle = Math.min(1, (char.grabStruggle || 0) + dt * 3.6);
+        } else {
+            char.grabStruggle = Math.max(0, (char.grabStruggle || 0) - dt * 1.6);
+        }
+
+        if ((char.grabStruggle || 0) >= 0.6) {
             if (char.grabbedBy) {
                 enterState(char.grabbedBy, CharState.BLOCK_STAGGER);
                 char.grabbedBy.grabTarget = null;
@@ -111,6 +121,8 @@ export function processCharacterState(char, dt) {
                 char.grabbedBy.knockbackVel.z = Math.cos(char.facing) * 5;
                 char.grabbedBy = null;
             }
+            char.grabStruggle = 0;
+            char.grabEscapeLock = 0.45;
             exitAction(char);
             Audio.playDodge();
         }
@@ -196,7 +208,7 @@ function handleFreeState(char, dt) {
         return;
     }
     const grabCost = char.buffs.throwUp ? 18 : 25;
-    if (intent.grab && char.stamina >= grabCost) {
+    if (intent.grab && char.stamina >= grabCost && char.grabEscapeLock <= 0) {
         enterState(char, CharState.GRAB);
         char.stamina -= grabCost;
         char.staminaRegenDelay = 0.5;
@@ -566,6 +578,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                         attacker.grabTarget = target;
                         target.state = CharState.GRABBED;
                         target.stateTimer = 0;
+                        target.grabStruggle = 0;
                         target.grabbedBy = attacker;
                         target.velocity.set(0, 0, 0);
                         results.push({ attacker, target, damage: 0, isKO: false, isGrab: true });

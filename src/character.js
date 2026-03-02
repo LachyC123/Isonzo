@@ -94,6 +94,8 @@ export function createCharacter(name, colorSet, isPlayer) {
         animTime: 0, bobPhase: Math.random() * Math.PI * 2,
         colorSet,
         grabTarget: null, grabbedBy: null,
+        grabStruggle: 0,
+        grabEscapeLock: 0,
         ragdollVel: new THREE.Vector3(),
         bounceCount: 0,
         sprintAttack: false,
@@ -291,6 +293,8 @@ export function resetCharacter(char, x, z) {
     char.intent = createIntent();
     char.grabTarget = null;
     char.grabbedBy = null;
+    char.grabStruggle = 0;
+    char.grabEscapeLock = 0;
     char.bounceCount = 0;
     char.sprintAttack = false;
     char.landingTimer = 0;
