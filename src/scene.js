@@ -25,6 +25,9 @@ export class SceneManager {
         this.edgeRing = null;
         this.spotlights = [];
         this.energyBands = [];
+        this.floorPanels = [];
+        this.holoBanners = [];
+        this.crowdLights = [];
         this.centerGlyph = null;
         this.time = 0;
     }
@@ -112,6 +115,22 @@ export class SceneManager {
             ringMesh.rotation.x = -Math.PI / 2;
             ringMesh.position.y = 0.012;
             this.scene.add(ringMesh);
+        }
+
+        for (let i = 0; i < 36; i++) {
+            const a = (i / 36) * Math.PI * 2;
+            const panelGeo = new THREE.PlaneGeometry(1.8, 0.35);
+            const panelMat = new THREE.MeshBasicMaterial({
+                color: 0x6ea4ff, transparent: true, opacity: 0.14,
+                side: THREE.DoubleSide,
+            });
+            const panel = new THREE.Mesh(panelGeo, panelMat);
+            const pr = 11 + (i % 2) * 4.5;
+            panel.position.set(Math.cos(a) * pr, 0.03, Math.sin(a) * pr);
+            panel.rotation.x = -Math.PI / 2;
+            panel.rotation.z = a;
+            this.scene.add(panel);
+            this.floorPanels.push(panel);
         }
 
         const inlayMat = new THREE.MeshBasicMaterial({
@@ -236,6 +255,20 @@ export class SceneManager {
             const person = new THREE.Mesh(crowdGeo, crowdMat);
             person.position.set(Math.cos(a) * dist, h * 0.5 - 0.3, Math.sin(a) * dist);
             this.scene.add(person);
+
+            if (i % 3 === 0) {
+                const glow = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.05, 5, 4),
+                    new THREE.MeshBasicMaterial({
+                        color: Math.random() > 0.5 ? 0x7bc4ff : 0xff8f56,
+                        transparent: true,
+                        opacity: 0.8,
+                    })
+                );
+                glow.position.set(Math.cos(a) * dist, h + 0.2, Math.sin(a) * dist);
+                this.scene.add(glow);
+                this.crowdLights.push(glow);
+            }
         }
 
         for (let i = 0; i < 12; i++) {
@@ -270,6 +303,19 @@ export class SceneManager {
             const pl = new THREE.PointLight(0xffaa44, 0.15, 8);
             pl.position.set(px, 4.2, pz);
             this.scene.add(pl);
+
+            const bannerGeo = new THREE.PlaneGeometry(1.8, 0.7);
+            const bannerMat = new THREE.MeshBasicMaterial({
+                color: i % 2 === 0 ? 0x5cb2ff : 0xff9b4f,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide,
+            });
+            const banner = new THREE.Mesh(bannerGeo, bannerMat);
+            banner.position.set(px * 1.03, 3.2, pz * 1.03);
+            banner.lookAt(0, 3.2, 0);
+            this.scene.add(banner);
+            this.holoBanners.push(banner);
         }
 
         for (let i = 0; i < 6; i++) {
@@ -472,6 +518,18 @@ export class SceneManager {
         for (let i = 0; i < this.energyBands.length; i++) {
             const band = this.energyBands[i];
             band.material.opacity = 0.08 + Math.sin(this.time * (1.2 + i * 0.35) + i) * 0.04 + i * 0.025;
+        }
+        for (let i = 0; i < this.floorPanels.length; i++) {
+            const panel = this.floorPanels[i];
+            panel.material.opacity = 0.1 + Math.sin(this.time * 3 + i * 0.4) * 0.07;
+        }
+        for (let i = 0; i < this.holoBanners.length; i++) {
+            const banner = this.holoBanners[i];
+            banner.material.opacity = 0.18 + Math.sin(this.time * 2.3 + i) * 0.12;
+        }
+        for (let i = 0; i < this.crowdLights.length; i++) {
+            const light = this.crowdLights[i];
+            light.material.opacity = 0.4 + Math.sin(this.time * 5 + i * 1.7) * 0.35;
         }
         if (this.centerGlyph) {
             this.centerGlyph.rotation.z = this.time * 0.45;
