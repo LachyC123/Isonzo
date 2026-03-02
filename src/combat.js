@@ -71,6 +71,20 @@ const ATTACKS = {
     },
 };
 
+
+function clampMove(current, target, maxDelta) {
+    if (current < target) return Math.min(current + maxDelta, target);
+    if (current > target) return Math.max(current - maxDelta, target);
+    return target;
+}
+
+function lerpAngle(a, b, t) {
+    let d = b - a;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    return a + d * Math.min(Math.max(t, 0), 1);
+}
+
 export function getAttackData(state) {
     return ATTACKS[state] || null;
 }
@@ -230,18 +244,23 @@ function handleFreeState(char, dt) {
     if (moveLen > 0.1) {
         const sprint = intent.sprint && char.stamina > 0;
         const speed = sprint ? 10.5 * getBuildSprintSpeed(char) : 6.5 * getBuildMoveSpeed(char);
-        char.velocity.x = (intent.moveX / moveLen) * speed;
-        char.velocity.z = (intent.moveZ / moveLen) * speed;
-        char.facing = Math.atan2(intent.moveX, intent.moveZ);
+        const targetVX = (intent.moveX / moveLen) * speed;
+        const targetVZ = (intent.moveZ / moveLen) * speed;
+        const accel = (sprint ? 48 : 36) * dt;
+        char.velocity.x = clampMove(char.velocity.x, targetVX, accel);
+        char.velocity.z = clampMove(char.velocity.z, targetVZ, accel);
+        const targetFacing = Math.atan2(intent.moveX, intent.moveZ);
+        char.facing = lerpAngle(char.facing, targetFacing, Math.min(1, dt * 18));
         char.state = sprint ? CharState.SPRINT : CharState.WALK;
         if (sprint) {
             char.stamina -= getBuildSprintDrain(char) * dt;
             char.staminaRegenDelay = 0.4;
         }
     } else {
-        char.velocity.x *= 0.8;
-        char.velocity.z *= 0.8;
-        char.state = CharState.IDLE;
+        const decel = 32 * dt;
+        char.velocity.x = clampMove(char.velocity.x, 0, decel);
+        char.velocity.z = clampMove(char.velocity.z, 0, decel);
+        char.state = (Math.abs(char.velocity.x) + Math.abs(char.velocity.z)) > 0.2 ? CharState.WALK : CharState.IDLE;
     }
 }
 
@@ -698,6 +717,9 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
             const hsTime = isBig ? 0.13 : (isFinisher ? 0.08 : 0.04);
             attacker.hitstopTimer = hsTime;
             target.hitstopTimer = hsTime;
+            attacker.hitConfirmTimer = isBig ? 0.08 : 0.05;
+            target.hitReactTimer = isBig ? 0.2 : 0.12;
+            target.hitReactStrength = Math.min(1.2, 0.35 + fKB * 0.03 + (isBig ? 0.25 : 0));
 
             if ((isBig || isFinisher) && sceneManager) {
                 sceneManager.shake(isHeavy ? 0.6 : (isSpecial ? 0.55 : (isDropkick ? 0.45 : 0.35)));
