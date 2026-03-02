@@ -3,7 +3,9 @@ import * as Audio from './audio.js';
 import {
     getBuildDamageMult, getBuildKBMult, getBuildKBResist, getBuildMoveSpeed,
     getBuildSprintSpeed, getBuildJumpPower, hasSuperArmor, hasQuickRecovery,
-    hasAirSuperiority, hasPowerThrow,
+    hasAirSuperiority, hasPowerThrow, getBuildDodgeCost, getBuildGrabCost,
+    getBuildSprintDrain, getBuildAirControl, getBuildGrabRange,
+    getBuildHeavyChargeRate, getBuildHitstunTaken,
 } from './builds.js';
 
 const ATTACKS = {
@@ -152,9 +154,10 @@ function handleFreeState(char, dt) {
     if (!char.grounded) {
         const moveLen = Math.sqrt(intent.moveX * intent.moveX + intent.moveZ * intent.moveZ);
         if (moveLen > 0.1) {
-            char.velocity.x += intent.moveX * 0.6 * dt * 60;
-            char.velocity.z += intent.moveZ * 0.6 * dt * 60;
-            const maxAir = 8;
+            const airControl = getBuildAirControl(char);
+            char.velocity.x += intent.moveX * 0.6 * airControl * dt * 60;
+            char.velocity.z += intent.moveZ * 0.6 * airControl * dt * 60;
+            const maxAir = 8.5 * airControl;
             const hSpd = Math.sqrt(char.velocity.x ** 2 + char.velocity.z ** 2);
             if (hSpd > maxAir) {
                 char.velocity.x *= maxAir / hSpd;
@@ -200,14 +203,16 @@ function handleFreeState(char, dt) {
         char.heavyChargeTime = 0;
         return;
     }
-    if (intent.dodge && char.stamina >= 20) {
+    const dodgeCost = getBuildDodgeCost(char);
+    if (intent.dodge && char.stamina >= dodgeCost) {
         enterState(char, CharState.DODGE);
-        char.stamina -= 20;
+        char.stamina -= dodgeCost;
         char.staminaRegenDelay = 0.5;
         Audio.playDodge();
         return;
     }
-    const grabCost = char.buffs.throwUp ? 18 : 25;
+    const baseGrabCost = getBuildGrabCost(char);
+    const grabCost = char.buffs.throwUp ? baseGrabCost * 0.72 : baseGrabCost;
     if (intent.grab && char.stamina >= grabCost && char.grabEscapeLock <= 0) {
         enterState(char, CharState.GRAB);
         char.stamina -= grabCost;
@@ -230,7 +235,7 @@ function handleFreeState(char, dt) {
         char.facing = Math.atan2(intent.moveX, intent.moveZ);
         char.state = sprint ? CharState.SPRINT : CharState.WALK;
         if (sprint) {
-            char.stamina -= 15 * dt;
+            char.stamina -= getBuildSprintDrain(char) * dt;
             char.staminaRegenDelay = 0.4;
         }
     } else {
@@ -274,7 +279,7 @@ function handleActionState(char, dt) {
             break;
         }
         case CharState.HEAVY_CHARGE:
-            char.heavyChargeTime += dt;
+            char.heavyChargeTime += dt * getBuildHeavyChargeRate(char);
             char.velocity.x = 0;
             char.velocity.z = 0;
             if (!intent.heavyCharge) {
@@ -503,7 +508,7 @@ function handleActionState(char, dt) {
         case CharState.HITSTUN:
             char.velocity.x *= 0.88;
             char.velocity.z *= 0.88;
-            if (char.stateTimer >= 0.28) exitAction(char);
+            if (char.stateTimer >= 0.28 * getBuildHitstunTaken(char)) exitAction(char);
             break;
         case CharState.KNOCKBACK:
             if (char.grounded && char.stateTimer > 0.2) {
@@ -555,7 +560,7 @@ export function checkCombatHits(characters, uiManager, camera, sceneManager) {
                     const dx = target.position.x - attacker.position.x;
                     const dz = target.position.z - attacker.position.z;
                     const dist = Math.sqrt(dx * dx + dz * dz);
-                    if (dist > data.range) continue;
+                    if (dist > data.range * getBuildGrabRange(attacker)) continue;
 
                     const aToT = Math.atan2(dx, dz);
                     let aDiff = aToT - attacker.facing;

@@ -8,15 +8,22 @@ export const BUILDS = [
         desc: 'Massive powerhouse. Slow but devastating hits.',
         scale: 1.25,
         stats: {
-            moveSpeed: 0.8,
-            sprintSpeed: 0.85,
-            jumpPower: 0.9,
-            damageMult: 1.3,
-            knockbackMult: 1.35,
-            knockbackResist: 0.7,
+            moveSpeed: 0.74,
+            sprintSpeed: 0.8,
+            jumpPower: 0.85,
+            damageMult: 1.4,
+            knockbackMult: 1.45,
+            knockbackResist: 0.62,
             staminaMax: 90,
-            staminaRegen: 0.9,
-            weight: 1.4,
+            staminaRegen: 0.8,
+            weight: 1.55,
+            dodgeCost: 28,
+            grabCost: 28,
+            sprintDrain: 17,
+            hitstunTaken: 0.85,
+            airControl: 0.72,
+            grabRange: 1,
+            heavyChargeRate: 1.12,
         },
         passive: 'Super Armor: light attacks cannot stagger',
         passiveId: 'superArmor',
@@ -30,15 +37,22 @@ export const BUILDS = [
         desc: 'Armored tank. Great grabs and block recovery.',
         scale: 1.18,
         stats: {
-            moveSpeed: 0.85,
-            sprintSpeed: 0.88,
+            moveSpeed: 0.82,
+            sprintSpeed: 0.86,
             jumpPower: 0.92,
-            damageMult: 1.1,
-            knockbackMult: 1.2,
-            knockbackResist: 0.65,
-            staminaMax: 110,
-            staminaRegen: 1.1,
-            weight: 1.3,
+            damageMult: 1.05,
+            knockbackMult: 1.15,
+            knockbackResist: 0.58,
+            staminaMax: 120,
+            staminaRegen: 1.2,
+            weight: 1.38,
+            dodgeCost: 24,
+            grabCost: 22,
+            sprintDrain: 13,
+            hitstunTaken: 0.78,
+            airControl: 0.8,
+            grabRange: 1.1,
+            heavyChargeRate: 0.9,
         },
         passive: 'Iron Guard: blocking costs no stamina',
         passiveId: 'ironGuard',
@@ -61,6 +75,13 @@ export const BUILDS = [
             staminaMax: 100,
             staminaRegen: 1.0,
             weight: 1.0,
+            dodgeCost: 20,
+            grabCost: 24,
+            sprintDrain: 15,
+            hitstunTaken: 1.0,
+            airControl: 1.0,
+            grabRange: 1,
+            heavyChargeRate: 1,
         },
         passive: 'Combo King: light combo does bonus damage',
         passiveId: 'comboKing',
@@ -74,15 +95,22 @@ export const BUILDS = [
         desc: 'Throw specialist. Grabs hit harder and further.',
         scale: 1.05,
         stats: {
-            moveSpeed: 0.95,
-            sprintSpeed: 0.95,
-            jumpPower: 0.95,
-            damageMult: 1.0,
-            knockbackMult: 1.0,
-            knockbackResist: 0.9,
+            moveSpeed: 0.9,
+            sprintSpeed: 0.92,
+            jumpPower: 0.9,
+            damageMult: 1.05,
+            knockbackMult: 1.08,
+            knockbackResist: 0.86,
             staminaMax: 105,
-            staminaRegen: 1.05,
-            weight: 1.1,
+            staminaRegen: 1.1,
+            weight: 1.2,
+            dodgeCost: 21,
+            grabCost: 17,
+            sprintDrain: 14,
+            hitstunTaken: 0.9,
+            airControl: 0.9,
+            grabRange: 1.28,
+            heavyChargeRate: 1.05,
         },
         passive: 'Power Throw: grabs deal 40% more damage and knockback',
         passiveId: 'powerThrow',
@@ -96,15 +124,22 @@ export const BUILDS = [
         desc: 'Fast and fierce. Rapid combos, quick dodge.',
         scale: 0.85,
         stats: {
-            moveSpeed: 1.2,
-            sprintSpeed: 1.15,
-            jumpPower: 1.1,
-            damageMult: 0.9,
+            moveSpeed: 1.24,
+            sprintSpeed: 1.22,
+            jumpPower: 1.08,
+            damageMult: 0.88,
             knockbackMult: 0.85,
-            knockbackResist: 1.2,
-            staminaMax: 110,
-            staminaRegen: 1.2,
+            knockbackResist: 1.24,
+            staminaMax: 112,
+            staminaRegen: 1.26,
             weight: 0.7,
+            dodgeCost: 14,
+            grabCost: 23,
+            sprintDrain: 11,
+            hitstunTaken: 1.18,
+            airControl: 1.25,
+            grabRange: 0.92,
+            heavyChargeRate: 0.95,
         },
         passive: 'Quick Recovery: getup 50% faster',
         passiveId: 'quickRecovery',
@@ -118,15 +153,22 @@ export const BUILDS = [
         desc: 'Aerial master. Extra jumps and dropkick power.',
         scale: 0.82,
         stats: {
-            moveSpeed: 1.15,
-            sprintSpeed: 1.1,
-            jumpPower: 1.25,
+            moveSpeed: 1.18,
+            sprintSpeed: 1.13,
+            jumpPower: 1.3,
             damageMult: 0.85,
             knockbackMult: 0.9,
-            knockbackResist: 1.25,
-            staminaMax: 115,
-            staminaRegen: 1.15,
+            knockbackResist: 1.3,
+            staminaMax: 118,
+            staminaRegen: 1.18,
             weight: 0.65,
+            dodgeCost: 16,
+            grabCost: 21,
+            sprintDrain: 12,
+            hitstunTaken: 1.22,
+            airControl: 1.45,
+            grabRange: 0.95,
+            heavyChargeRate: 0.9,
         },
         passive: 'Air Superiority: dropkick does 50% more damage',
         passiveId: 'airSuperiority',
@@ -148,6 +190,31 @@ export function applyBuild(char, build) {
     if (shadow) {
         shadow.scale.set(1 / build.scale, 1 / build.scale, 1 / build.scale);
     }
+
+    const p = char.bodyParts;
+    p.lShoulder.scale.set(1, 1, 1);
+    p.rShoulder.scale.set(1, 1, 1);
+    p.head.scale.set(1, 1.06, 0.95);
+    p.hips.scale.set(1.12, 0.5, 0.82);
+    p.lBoot.scale.set(1, 1, 1);
+    p.rBoot.scale.set(1, 1, 1);
+
+    if (build.category === 'tall') {
+        p.lShoulder.scale.set(1.2, 1.2, 1.2);
+        p.rShoulder.scale.set(1.2, 1.2, 1.2);
+        p.hips.scale.set(1.2, 0.55, 0.9);
+    } else if (build.category === 'short') {
+        p.head.scale.set(1.12, 1.18, 1.06);
+        p.lBoot.scale.set(1.12, 1.05, 1.2);
+        p.rBoot.scale.set(1.12, 1.05, 1.2);
+    }
+
+    const accentColor = build.color;
+    char.bodyParts.mask.material.color.setHex(accentColor);
+    char.bodyParts.visor.material.emissive.setHex(accentColor);
+    char.bodyParts.visor.material.emissiveIntensity = 0.28;
+    char.bodyParts.belt.material.emissive.setHex(accentColor);
+    char.bodyParts.belt.material.emissiveIntensity = 0.14;
 }
 
 export function getBuildDamageMult(char) {
@@ -182,6 +249,46 @@ export function getBuildSprintSpeed(char) {
 export function getBuildJumpPower(char) {
     if (!char.build) return 1;
     return char.build.stats.jumpPower;
+}
+
+export function getBuildDodgeCost(char) {
+    if (!char.build) return 20;
+    return char.build.stats.dodgeCost;
+}
+
+export function getBuildGrabCost(char) {
+    if (!char.build) return 25;
+    return char.build.stats.grabCost;
+}
+
+export function getBuildSprintDrain(char) {
+    if (!char.build) return 15;
+    return char.build.stats.sprintDrain;
+}
+
+export function getBuildStaminaRegen(char) {
+    if (!char.build) return 1;
+    return char.build.stats.staminaRegen;
+}
+
+export function getBuildHitstunTaken(char) {
+    if (!char.build) return 1;
+    return char.build.stats.hitstunTaken;
+}
+
+export function getBuildAirControl(char) {
+    if (!char.build) return 1;
+    return char.build.stats.airControl;
+}
+
+export function getBuildGrabRange(char) {
+    if (!char.build) return 1;
+    return char.build.stats.grabRange;
+}
+
+export function getBuildHeavyChargeRate(char) {
+    if (!char.build) return 1;
+    return char.build.stats.heavyChargeRate;
 }
 
 export function getBuildWeight(char) {
