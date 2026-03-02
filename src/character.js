@@ -101,6 +101,10 @@ export function createCharacter(name, colorSet, isPlayer) {
         sprintAttack: false,
         landingTimer: 0,
         specialMove: null,
+        moveAnimBlend: 0,
+        hitReactTimer: 0,
+        hitReactStrength: 0,
+        hitConfirmTimer: 0,
         build: null,
     };
 
@@ -299,6 +303,10 @@ export function resetCharacter(char, x, z) {
     char.sprintAttack = false;
     char.landingTimer = 0;
     char.specialMove = null;
+    char.moveAnimBlend = 0;
+    char.hitReactTimer = 0;
+    char.hitReactStrength = 0;
+    char.hitConfirmTimer = 0;
     char.mesh.position.copy(char.position);
     char.mesh.rotation.set(0, 0, 0);
     char.mesh.visible = true;
@@ -349,6 +357,8 @@ export function updateCharacterAnimation(char, dt) {
     char.animTime += dt;
 
     if (char.landingTimer > 0) char.landingTimer -= dt;
+    if (char.hitReactTimer > 0) char.hitReactTimer -= dt;
+    if (char.hitConfirmTimer > 0) char.hitConfirmTimer -= dt;
 
     const t = char.animTime;
     const p = char.bodyParts;
@@ -387,34 +397,35 @@ export function updateCharacterAnimation(char, dt) {
         case CharState.WALK:
         case CharState.SPRINT: {
             const isSprint = st === CharState.SPRINT;
+            char.moveAnimBlend = Math.min(1, char.moveAnimBlend + dt * 8);
+            const blend = char.moveAnimBlend;
             const freq = isSprint ? 11 : 6.5;
-            const stride = isSprint ? 0.6 : 0.38;
+            const stride = (isSprint ? 0.6 : 0.38) * blend;
             const bob = Math.sin(t * freq) * (isSprint ? 0.045 : 0.02);
-            const lean = isSprint ? 0.18 : 0.06;
+            const lean = (isSprint ? 0.18 : 0.06) * blend;
             const phase = Math.sin(t * freq);
-            const halfP = Math.sin(t * freq * 2);
 
-            p.chest.position.y += bob;
+            p.chest.position.y += bob * blend;
             p.torso.rotation.x = lean;
             p.chest.rotation.x = -lean * 0.4;
-            p.hips.rotation.y = phase * 0.1;
+            p.hips.rotation.y = phase * 0.1 * blend;
 
             p.lThigh.pivot.rotation.x = phase * stride;
             p.rThigh.pivot.rotation.x = -phase * stride;
             p.lShin.pivot.rotation.x = Math.max(0, -phase) * stride * 0.9 + 0.05;
             p.rShin.pivot.rotation.x = Math.max(0, phase) * stride * 0.9 + 0.05;
 
-            const armS = isSprint ? 0.7 : 0.45;
+            const armS = (isSprint ? 0.7 : 0.45) * blend;
             p.lUpperArm.pivot.rotation.x = -phase * armS;
             p.rUpperArm.pivot.rotation.x = phase * armS;
-            p.lUpperArm.pivot.rotation.z = 0.08;
-            p.rUpperArm.pivot.rotation.z = -0.08;
+            p.lUpperArm.pivot.rotation.z = 0.08 * blend;
+            p.rUpperArm.pivot.rotation.z = -0.08 * blend;
             p.lForearm.pivot.rotation.x = isSprint ? -0.9 : -0.5;
             p.rForearm.pivot.rotation.x = isSprint ? -0.9 : -0.5;
 
             if (isSprint) {
-                p.chest.rotation.z = phase * 0.04;
-                p.torso.position.y -= 0.03;
+                p.chest.rotation.z = phase * 0.04 * blend;
+                p.torso.position.y -= 0.03 * blend;
             }
             break;
         }
@@ -1071,6 +1082,33 @@ export function updateCharacterAnimation(char, dt) {
             p.rShin.pivot.rotation.x = -0.3 - flail2 * 0.2;
             return;
         }
+    }
+
+    if (st !== CharState.WALK && st !== CharState.SPRINT) {
+        char.moveAnimBlend = Math.max(0, char.moveAnimBlend - dt * 9);
+    }
+
+    if (char.hitConfirmTimer > 0) {
+        const confirm = Math.max(0, char.hitConfirmTimer / 0.08);
+        p.chest.rotation.z += Math.sin(t * 80) * 0.025 * confirm;
+        p.torso.position.y += 0.02 * confirm;
+    }
+
+    if (char.hitReactTimer > 0) {
+        const react = Math.max(0, char.hitReactTimer / 0.18);
+        const str = char.hitReactStrength || 0.3;
+        const jolt = Math.sin(t * 95) * 0.03 * react * str;
+        p.torso.rotation.z += jolt;
+        p.head.rotation.z += jolt * 1.4;
+        p.chest.position.y -= 0.03 * react * str;
+        p.lUpperArm.pivot.rotation.z += 0.25 * react * str;
+        p.rUpperArm.pivot.rotation.z -= 0.25 * react * str;
+        const flash = react * str;
+        p.torso.material.emissive.setRGB(flash * 0.6, flash * 0.08, flash * 0.08);
+        p.chest.material.emissive.setRGB(flash * 0.7, flash * 0.1, flash * 0.1);
+    } else {
+        p.torso.material.emissive.setRGB(0, 0, 0);
+        p.chest.material.emissive.setRGB(0, 0, 0);
     }
 
     const glowStates = new Set([CharState.HEAVY_CHARGE, CharState.HEAVY_RELEASE,
