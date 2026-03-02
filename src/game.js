@@ -375,20 +375,15 @@ export class Game {
             }
 
             if (hit.damage > 0) {
-                const isBig = hit.damage >= 16;
-                const isHuge = hit.damage >= 22;
-                const color = isHuge ? 0xffaa00 : (isBig ? 0xffcc44 : 0xffffff);
-                const count = isHuge ? 22 : (isBig ? 12 : 6);
-                this.scene.spawnHitParticles(hit.target.position, color, count);
-                this.scene.spawnSpeedLines(hit.target.position, 0, color);
-                if (isBig) this.scene.spawnImpactRing(hit.target.position);
-                if (isHuge) {
-                    this.scene.spawnDustCloud(hit.target.position);
-                    this.scene.spawnImpactRing(hit.target.position);
-                    this.scene.spawnGroundCrack(hit.target.position);
-                }
+                const moveFx = this._getMoveImpactFX(hit.attacker.state, hit.damage);
+                this.scene.spawnHitParticles(hit.target.position, moveFx.color, moveFx.particleCount);
+                this.scene.spawnSpeedLines(hit.target.position, 0, moveFx.color);
+                if (moveFx.impactRing) this.scene.spawnImpactRing(hit.target.position);
+                if (moveFx.dust) this.scene.spawnDustCloud(hit.target.position);
+                if (moveFx.crack) this.scene.spawnGroundCrack(hit.target.position);
+                if (moveFx.shake > 0) this.scene.shake(moveFx.shake);
                 if (hit.target === this.player) {
-                    this.ui.flashScreen(isHuge ? 'white' : 'red');
+                    this.ui.flashScreen(moveFx.flash);
                 }
                 if (hit.blocked) {
                     this.scene.spawnHitParticles(hit.target.position, 0x4488ff, 8);
@@ -547,6 +542,92 @@ export class Game {
                 );
             }
         }
+    }
+
+    _getMoveImpactFX(state, damage) {
+        const baseBig = damage >= 16;
+        const baseHuge = damage >= 22;
+        const fx = {
+            color: baseHuge ? 0xffaa00 : (baseBig ? 0xffcc44 : 0xffffff),
+            particleCount: baseHuge ? 22 : (baseBig ? 12 : 6),
+            impactRing: baseBig,
+            dust: baseHuge,
+            crack: baseHuge,
+            shake: 0,
+            flash: baseHuge ? 'white' : 'red',
+        };
+
+        switch (state) {
+            case CharState.LIGHT1:
+            case CharState.LIGHT2:
+            case CharState.LIGHT3:
+                fx.color = 0xfff1c4;
+                fx.particleCount += 2;
+                fx.shake = Math.max(fx.shake, 0.08);
+                break;
+            case CharState.HEAVY_RELEASE:
+                fx.color = 0xffaa33;
+                fx.particleCount += 6;
+                fx.impactRing = true;
+                fx.dust = true;
+                fx.shake = Math.max(fx.shake, 0.3);
+                break;
+            case CharState.DROPKICK:
+            case CharState.SPECIAL_DROPKICK:
+                fx.color = 0x66ccff;
+                fx.particleCount += 5;
+                fx.impactRing = true;
+                fx.shake = Math.max(fx.shake, 0.24);
+                break;
+            case CharState.SPECIAL_UPPERCUT:
+                fx.color = 0xff6622;
+                fx.particleCount += 5;
+                fx.impactRing = true;
+                fx.shake = Math.max(fx.shake, 0.26);
+                break;
+            case CharState.SPECIAL_SPIN:
+                fx.color = 0xbb66ff;
+                fx.particleCount += 4;
+                fx.shake = Math.max(fx.shake, 0.2);
+                break;
+            case CharState.SPECIAL_LARIAT:
+                fx.color = 0xff4466;
+                fx.particleCount += 5;
+                fx.impactRing = true;
+                fx.shake = Math.max(fx.shake, 0.25);
+                break;
+            case CharState.SPECIAL_SUPLEX:
+                fx.color = 0x66e4ff;
+                fx.particleCount += 8;
+                fx.impactRing = true;
+                fx.dust = true;
+                fx.crack = true;
+                fx.shake = Math.max(fx.shake, 0.34);
+                fx.flash = 'white';
+                break;
+            case CharState.SPECIAL_FLURRY:
+                fx.color = 0xff66cc;
+                fx.particleCount += 4;
+                fx.shake = Math.max(fx.shake, 0.18);
+                break;
+            case CharState.SPECIAL_CRATER:
+                fx.color = 0xff7744;
+                fx.particleCount += 10;
+                fx.impactRing = true;
+                fx.dust = true;
+                fx.crack = true;
+                fx.shake = Math.max(fx.shake, 0.38);
+                fx.flash = 'white';
+                break;
+            case CharState.SPECIAL_CHAIN_GRAB:
+                fx.color = 0x66ffcc;
+                fx.particleCount += 8;
+                fx.impactRing = true;
+                fx.shake = Math.max(fx.shake, 0.32);
+                break;
+        }
+
+        return fx;
     }
 
     _handleRingOut(char, aliveBeforeThis) {
