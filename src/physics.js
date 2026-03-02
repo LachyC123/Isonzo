@@ -1,5 +1,6 @@
 import { CharState } from './character.js';
 import * as Audio from './audio.js';
+import { getBuildStaminaRegen } from './builds.js';
 
 const GRAVITY = -35;
 const ARENA_RADIUS = 26;
@@ -64,7 +65,7 @@ export function updatePhysics(char, dt) {
     if (char.staminaRegenDelay > 0) {
         char.staminaRegenDelay -= dt;
     } else {
-        char.stamina = Math.min(char.maxStamina, char.stamina + 22 * dt);
+        char.stamina = Math.min(char.maxStamina, char.stamina + 22 * getBuildStaminaRegen(char) * dt);
     }
 
     if (char.buffs.regenUp && char.damage > 0) {

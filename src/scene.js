@@ -33,7 +33,7 @@ export class SceneManager {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x06061a);
+        this.renderer.setClearColor(0x040412);
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.1;
 
@@ -45,25 +45,25 @@ export class SceneManager {
         );
         this.camera.position.set(0, 10, 20);
 
-        const ambient = new THREE.AmbientLight(0x303050, 0.5);
+        const ambient = new THREE.AmbientLight(0x324060, 0.56);
         this.scene.add(ambient);
 
-        const hemi = new THREE.HemisphereLight(0x6688cc, 0x221122, 0.4);
+        const hemi = new THREE.HemisphereLight(0x7390d8, 0x1d0f1f, 0.5);
         this.scene.add(hemi);
 
         const sun = new THREE.DirectionalLight(0xffeedd, 1.0);
         sun.position.set(12, 30, 8);
         this.scene.add(sun);
 
-        const rim = new THREE.DirectionalLight(0x4466ff, 0.4);
+        const rim = new THREE.DirectionalLight(0x4c7aff, 0.55);
         rim.position.set(-15, 8, -12);
         this.scene.add(rim);
 
-        const warm = new THREE.DirectionalLight(0xff8844, 0.2);
+        const warm = new THREE.DirectionalLight(0xff9852, 0.32);
         warm.position.set(5, 3, 15);
         this.scene.add(warm);
 
-        const center = new THREE.PointLight(0xffbb55, 0.8, 40);
+        const center = new THREE.PointLight(0xffbb55, 1.1, 44);
         center.position.set(0, 5, 0);
         this.scene.add(center);
 
@@ -86,7 +86,7 @@ export class SceneManager {
 
         const topGeo = new THREE.CylinderGeometry(r, r, 0.15, 64);
         const topMat = new THREE.MeshPhongMaterial({
-            color: 0x282840, specular: 0x111125, shininess: 20,
+            color: 0x2a2a46, specular: 0x1d1d34, shininess: 28,
         });
         const top = new THREE.Mesh(topGeo, topMat);
         top.position.y = -0.05;
@@ -105,7 +105,7 @@ export class SceneManager {
         for (let ring = 5; ring <= 20; ring += 5) {
             const rGeo = new THREE.RingGeometry(ring - 0.05, ring + 0.05, 64);
             const rMat = new THREE.MeshBasicMaterial({
-                color: 0x3a3a50, transparent: true, opacity: 0.15,
+                color: 0x5872b2, transparent: true, opacity: 0.2,
                 side: THREE.DoubleSide,
             });
             const ringMesh = new THREE.Mesh(rGeo, rMat);
@@ -162,6 +162,17 @@ export class SceneManager {
         this.edgeRing.rotation.x = Math.PI / 2;
         this.edgeRing.position.y = 0;
         this.scene.add(this.edgeRing);
+
+        const trimGeo = new THREE.TorusGeometry(this.dangerRadius, 0.08, 10, 80);
+        const trimMat = new THREE.MeshPhongMaterial({
+            color: 0x44aaff, emissive: 0x2d5cbc, emissiveIntensity: 0.5,
+            transparent: true, opacity: 0.35,
+        });
+        const trimRing = new THREE.Mesh(trimGeo, trimMat);
+        trimRing.rotation.x = Math.PI / 2;
+        trimRing.position.y = 0.05;
+        this.scene.add(trimRing);
+        this.energyBands.push(trimRing);
 
         const innerEdgeGeo = new THREE.TorusGeometry(r - 0.5, 0.06, 8, 80);
         const innerEdgeMat = new THREE.MeshPhongMaterial({
