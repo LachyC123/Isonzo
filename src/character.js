@@ -134,6 +134,18 @@ export function createCharacter(name, colorSet, isPlayer) {
     chest.scale.set(1.28, 0.72, 0.92);
     root.add(chest);
 
+    const chestPlateGeo = new THREE.BoxGeometry(0.5, 0.22, 0.13);
+    const chestPlate = new THREE.Mesh(chestPlateGeo, new THREE.MeshPhongMaterial({
+        color: colorSet.accent,
+        emissive: colorSet.accent,
+        emissiveIntensity: 0.2,
+        specular: 0xaaaaaa,
+        shininess: 75,
+    }));
+    chestPlate.position.set(0, 1.39, 0.37);
+    chestPlate.rotation.x = -0.1;
+    root.add(chestPlate);
+
     const beltGeo = new THREE.TorusGeometry(0.4, 0.06, 6, 16);
     const belt = new THREE.Mesh(beltGeo, accentMat.clone());
     belt.position.y = 0.82;
@@ -212,6 +224,16 @@ export function createCharacter(name, colorSet, isPlayer) {
     visor.position.set(0, 1.77, -0.16);
     root.add(visor);
 
+    const crestGeo = new THREE.BoxGeometry(0.06, 0.2, 0.18);
+    const crest = new THREE.Mesh(crestGeo, new THREE.MeshPhongMaterial({
+        color: colorSet.accent,
+        emissive: colorSet.accent,
+        emissiveIntensity: 0.3,
+        shininess: 60,
+    }));
+    crest.position.set(0, 2.02, -0.01);
+    root.add(crest);
+
     const hipsGeo = new THREE.SphereGeometry(0.34, 8, 6);
     const hips = new THREE.Mesh(hipsGeo, darkMat.clone());
     hips.position.y = 0.72;
@@ -259,14 +281,42 @@ export function createCharacter(name, colorSet, isPlayer) {
     shadow.position.y = 0.02;
     root.add(shadow);
 
+    const aura = new THREE.Mesh(
+        new THREE.RingGeometry(0.55, 0.72, 24),
+        new THREE.MeshBasicMaterial({
+            color: colorSet.accent,
+            transparent: true,
+            opacity: isPlayer ? 0.4 : 0.28,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+        })
+    );
+    aura.rotation.x = -Math.PI / 2;
+    aura.position.y = 0.04;
+    root.add(aura);
+
+    const outline = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.47, 1.42, 6, 8),
+        new THREE.MeshBasicMaterial({
+            color: colorSet.accent,
+            side: THREE.BackSide,
+            transparent: true,
+            opacity: isPlayer ? 0.16 : 0.1,
+            depthWrite: false,
+        })
+    );
+    outline.position.y = 1.05;
+    outline.scale.set(1.07, 1.04, 1.07);
+    root.add(outline);
+
     char.bodyParts = {
-        torso, chest, head, mask, visor, hips, belt, buckle,
+        torso, chest, chestPlate, head, mask, visor, crest, hips, belt, buckle,
         lShoulder, rShoulder,
         lUpperArm, lForearm, lFist,
         rUpperArm, rForearm, rFist,
         lThigh, lShin, lBoot,
         rThigh, rShin, rBoot,
-        shadow,
+        shadow, aura, outline,
     };
     char.mesh = root;
     return char;
