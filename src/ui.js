@@ -10,7 +10,9 @@ export class UIManager {
         this.roundText = document.getElementById('round-text');
         this.playerDmg = document.getElementById('player-dmg');
         this.playerStaminaBar = document.getElementById('player-stamina');
+        this.playerStaminaValue = document.getElementById('player-stamina-value');
         this.enemyContainer = document.getElementById('enemy-stats-container');
+        this.modeLabel = document.getElementById('mode-label');
         this.mobileControls = document.getElementById('mobile-controls');
         this.lockOnEl = document.getElementById('lock-on-marker');
         this.hitFlash = document.getElementById('hit-flash');
@@ -34,6 +36,7 @@ export class UIManager {
     }
 
     setupEnemyBars(characters, mode) {
+        if (this.modeLabel) this.modeLabel.textContent = mode === 'teams' ? 'TEAM BATTLE' : 'FREE FOR ALL';
         this.enemyContainer.innerHTML = '';
         for (const char of characters) {
             if (char.isPlayer) continue;
@@ -66,6 +69,7 @@ export class UIManager {
         if (this.playerStaminaBar) {
             const sp = Math.max(0, (player.stamina / player.maxStamina) * 100);
             this.playerStaminaBar.style.width = `${sp}%`;
+            if (this.playerStaminaValue) this.playerStaminaValue.textContent = `${Math.round(sp)}%`;
         }
 
         for (const e of enemies) {
@@ -76,7 +80,10 @@ export class UIManager {
                 el.className = this._getDmgClass(pct);
             }
             const stat = document.getElementById(`enemy-${e.name}`);
-            if (stat) stat.style.opacity = e.alive ? '1' : '0.3';
+            if (stat) {
+                stat.style.opacity = e.alive ? '1' : '0.3';
+                stat.classList.toggle('critical', e.damage >= 120 && e.alive);
+            }
         }
 
         const alive = [player, ...enemies].filter(c => c.alive).length;

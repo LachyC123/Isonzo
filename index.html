@@ -23,6 +23,11 @@
                 <div class="menu-content">
                     <h1 class="game-title">BRAWL<span>CROWN</span></h1>
                     <p class="tagline">King of the Rooftop</p>
+                    <div class="menu-chips">
+                        <span class="menu-chip">Arena Brawler</span>
+                        <span class="menu-chip">Solo &amp; 2v2</span>
+                        <span class="menu-chip">Build Perks</span>
+                    </div>
                     <button id="btn-play" class="btn-primary">FIGHT</button>
                     <button id="btn-controls" class="btn-secondary">CONTROLS</button>
                 </div>
@@ -115,6 +120,10 @@
                 <div id="player-stats">
                     <div class="player-name">YOU</div>
                     <div class="dmg-pct" id="player-dmg">0%</div>
+                    <div class="resource-row">
+                        <span class="resource-label">STAMINA</span>
+                        <span id="player-stamina-value">100%</span>
+                    </div>
                     <div class="bar-container stamina-bar">
                         <div class="bar-fill" id="player-stamina"></div>
                     </div>
@@ -122,6 +131,7 @@
                 </div>
 
                 <div id="round-tracker">
+                    <div id="mode-label">FREE FOR ALL</div>
                     <div id="round-text">ROUND 1</div>
                     <div id="round-pips">
                         <span class="pip" id="pip-1"></span>
@@ -132,7 +142,10 @@
                     </div>
                 </div>
 
-                <div id="enemy-stats-container"></div>
+                <div id="enemy-stats-wrap">
+                    <div id="enemy-title">OPPONENTS</div>
+                    <div id="enemy-stats-container"></div>
+                </div>
 
                 <div id="combo-meter">
                     <span id="combo-count">0</span>
