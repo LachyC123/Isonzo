@@ -114,9 +114,29 @@ html, body {
 .tagline {
     font-size: 1rem;
     color: rgba(255,255,255,0.45);
-    margin-bottom: 3rem;
+    margin-bottom: 1.1rem;
     letter-spacing: 0.22em;
     text-transform: uppercase;
+}
+
+.menu-chips {
+    display: flex;
+    justify-content: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin: 0 auto 2.2rem;
+}
+
+.menu-chip {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.62);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 999px;
+    padding: 0.28rem 0.58rem;
+    background: rgba(255,255,255,0.04);
 }
 
 .btn-primary, .btn-secondary {
@@ -461,6 +481,27 @@ html, body {
     animation: dmg-hit-pop 0.18s ease-out;
 }
 
+.resource-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 1px 4px;
+}
+
+.resource-label {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.45);
+}
+
+#player-stamina-value {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: rgba(126, 224, 255, 0.95);
+    letter-spacing: 0.1em;
+}
+
 @keyframes dmg-hit-pop {
     0% { transform: scale(1); }
     45% { transform: scale(1.14); }
@@ -549,6 +590,14 @@ html, body {
     box-shadow: 0 10px 24px rgba(0,0,0,0.25);
 }
 
+#mode-label {
+    color: rgba(255,255,255,0.46);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    margin-bottom: 4px;
+}
+
 #round-text {
     color: rgba(255,255,255,0.75);
     font-size: 0.78rem;
@@ -582,10 +631,28 @@ html, body {
 }
 
 /* ── Enemy Stats ── */
-#enemy-stats-container {
+#enemy-stats-wrap {
     position: absolute;
     top: 12px; right: 12px;
-    width: clamp(80px, 20vw, 160px);
+    width: clamp(110px, 24vw, 190px);
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, rgba(10,10,20,0.46), rgba(20,20,32,0.08));
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+}
+
+#enemy-title {
+    text-align: right;
+    font-size: 0.55rem;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.18em;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+#enemy-stats-container {
+    width: 100%;
 }
 
 .enemy-stat {
@@ -596,6 +663,14 @@ html, body {
 .enemy-stat .dmg-pct {
     font-size: clamp(1.2rem, 3vw, 1.6rem);
     margin-bottom: 0;
+}
+
+.enemy-stat.critical .player-name {
+    color: rgba(255, 120, 100, 0.95) !important;
+}
+
+.enemy-stat.critical .dmg-pct {
+    text-shadow: 0 0 12px rgba(255, 80, 60, 0.45);
 }
 
 /* ── Combo Meter ── */
@@ -946,7 +1021,7 @@ html, body {
 /* ── Media queries ── */
 @media (max-width: 600px) {
     #player-stats { width: clamp(110px, 38vw, 180px); }
-    #enemy-stats-container { width: clamp(90px, 28vw, 150px); }
+    #enemy-stats-wrap { width: clamp(110px, 34vw, 165px); }
     .bar-container { height: 14px; }
     .enemy-stat .bar-container { height: 9px; }
     .btn-primary, .btn-secondary { width: 220px; font-size: 1rem; padding: 0.85rem 1.5rem; }
